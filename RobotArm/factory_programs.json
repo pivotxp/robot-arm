@@ -1,0 +1,3247 @@
+{
+ "programs": [
+  {
+   "number": 0,
+   "name": "Home",
+   "railProgram": 0,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "home",
+     "speed": 30.0,
+     "acc": 800.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 1,
+   "name": "Program 1",
+   "railProgram": 1,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -0.4,
+      -183.7,
+      -16.5,
+      -90.0
+     ],
+     "speed": 120.0,
+     "acc": 500.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -99.9,
+      -164.7,
+      84.2,
+      -90.0
+     ],
+     "speed": 120.0,
+     "acc": 500.0,
+     "radius": 60.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -0.4,
+      -183.7,
+      -16.5,
+      -90.0
+     ],
+     "speed": 55.0,
+     "acc": 500.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 2,
+   "name": "Program 2",
+   "railProgram": 2,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      -72.8,
+      -21.9,
+      94.7,
+      -90.0
+     ],
+     "speed": 180.0,
+     "acc": 1146.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "line",
+     "pose": [
+      0.0,
+      660.3,
+      290.8,
+      180.0,
+      0.0,
+      180.0
+     ],
+     "speed": 1000.0,
+     "acc": 2000.0,
+     "radius": 60.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      -72.8,
+      -21.9,
+      94.7,
+      -90.0
+     ],
+     "speed": 80.0,
+     "acc": 1146.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 3,
+   "name": "Program 3",
+   "railProgram": 3,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -87.1,
+      65.8,
+      -136.0,
+      70.2,
+      -203.8
+     ],
+     "speed": 125.0,
+     "acc": 600.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      91.7,
+      65.8,
+      -136.0,
+      72.2,
+      25.4
+     ],
+     "speed": 125.0,
+     "acc": 600.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -87.1,
+      65.8,
+      -136.0,
+      70.2,
+      -203.8
+     ],
+     "speed": 125.0,
+     "acc": 600.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 4,
+   "name": "Program 4",
+   "railProgram": 4,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -1.4,
+      116.6,
+      -134.5,
+      5.3,
+      -89.7
+     ],
+     "speed": 170.0,
+     "acc": 1000.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      4.6,
+      -9.5,
+      -135.7,
+      160.5,
+      -84.9
+     ],
+     "speed": 170.0,
+     "acc": 1000.0,
+     "radius": 80.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      2.9,
+      41.7,
+      -129.7,
+      88.1,
+      -85.5
+     ],
+     "speed": 170.0,
+     "acc": 500.0,
+     "radius": 60.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      69.4,
+      12.6,
+      -113.2,
+      100.6,
+      2.9
+     ],
+     "speed": 170.0,
+     "acc": 500.0,
+     "radius": 60.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -0.5,
+      107.2,
+      -119.6,
+      -12.0,
+      -89.1
+     ],
+     "speed": 170.0,
+     "acc": 500.0,
+     "radius": 60.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.1,
+      -11.5,
+      -71.7,
+      83.3,
+      -214.5
+     ],
+     "speed": 170.0,
+     "acc": 500.0,
+     "radius": 60.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -1.4,
+      116.6,
+      -134.5,
+      5.3,
+      -89.7
+     ],
+     "speed": 170.0,
+     "acc": 500.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 5,
+   "name": "Program 5",
+   "railProgram": 5,
+   "armDelay": 0.0,
+   "note": "The factory version had an arc (move_circle) after step 1. Arcs are not supported yet, so the arm goes straight to the next step instead.",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -65.1,
+      -12.7,
+      77.8,
+      -90.0
+     ],
+     "speed": 150.0,
+     "acc": 700.0,
+     "radius": 5.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -53.6,
+      -50.7,
+      117.3,
+      -90.0
+     ],
+     "speed": 150.0,
+     "acc": 700.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.2,
+      63.4,
+      -135.8,
+      72.4,
+      31.1
+     ],
+     "speed": 150.0,
+     "acc": 700.0,
+     "radius": 80.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      4.5,
+      -22.5,
+      -13.2,
+      35.6,
+      -85.0
+     ],
+     "speed": 150.0,
+     "acc": 700.0,
+     "radius": 80.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -86.6,
+      63.4,
+      -135.8,
+      72.4,
+      -215.5
+     ],
+     "speed": 150.0,
+     "acc": 700.0,
+     "radius": 80.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      86.6,
+      -175.9,
+      83.9,
+      -90.0
+     ],
+     "speed": 150.0,
+     "acc": 700.0,
+     "radius": 80.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      2.5,
+      6.7,
+      -119.4,
+      130.9,
+      -86.6
+     ],
+     "speed": 150.0,
+     "acc": 700.0,
+     "radius": 80.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      114.2,
+      -132.7,
+      0.8,
+      -90.0
+     ],
+     "speed": 150.0,
+     "acc": 600.0,
+     "radius": -1.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -65.1,
+      -12.7,
+      77.8,
+      -90.0
+     ],
+     "speed": 50.0,
+     "acc": 600.0,
+     "radius": 5.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 6,
+   "name": "Program 6",
+   "railProgram": 6,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -50.3,
+      -97.0,
+      164.2,
+      -90.0
+     ],
+     "speed": 90.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      50.1,
+      -135.3,
+      85.1,
+      -89.4
+     ],
+     "speed": 90.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      117.4,
+      -124.6,
+      -12.2,
+      -90.0
+     ],
+     "speed": 90.0,
+     "acc": 300.0,
+     "radius": 5.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -52.3,
+      -20.6,
+      76.3,
+      -89.4
+     ],
+     "speed": 90.0,
+     "acc": 300.0,
+     "radius": 5.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      75.1,
+      35.3,
+      -110.6,
+      75.3,
+      5.3
+     ],
+     "speed": 140.0,
+     "acc": 300.0,
+     "radius": 5.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -68.8,
+      35.3,
+      -110.6,
+      75.3,
+      -189.3
+     ],
+     "speed": 140.0,
+     "acc": 300.0,
+     "radius": 5.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -50.3,
+      -97.0,
+      164.2,
+      -90.0
+     ],
+     "speed": 110.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 7,
+   "name": "Program 7",
+   "railProgram": 7,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "pause",
+     "pauseAfter": 7.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      90.0,
+      -180.0,
+      90.0,
+      -201.1
+     ],
+     "speed": 100.0,
+     "acc": 100.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      90.0,
+      -180.0,
+      90.0,
+      19.0
+     ],
+     "speed": 100.0,
+     "acc": 100.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      90.0,
+      -180.0,
+      90.0,
+      -201.1
+     ],
+     "speed": 100.0,
+     "acc": 100.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 8,
+   "name": "Program 8",
+   "railProgram": 8,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -3.0,
+      11.1,
+      -102.4,
+      91.3,
+      -193.1
+     ],
+     "speed": 100.0,
+     "acc": 700.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      82.5,
+      -161.3,
+      79.2,
+      -90.0
+     ],
+     "speed": 100.0,
+     "acc": 700.0,
+     "radius": -1.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -3.0,
+      11.1,
+      -102.4,
+      91.3,
+      -193.1
+     ],
+     "speed": 30.0,
+     "acc": 700.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 9,
+   "name": "Program 9",
+   "railProgram": 9,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -88.5,
+      65.9,
+      -137.7,
+      71.8,
+      -201.7
+     ],
+     "speed": 180.0,
+     "acc": 400.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -86.8,
+      -12.5,
+      99.3,
+      -90.0
+     ],
+     "speed": 180.0,
+     "acc": 400.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      35.0,
+      -129.6,
+      103.1,
+      -90.1
+     ],
+     "speed": 180.0,
+     "acc": 400.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -86.8,
+      -12.5,
+      99.3,
+      -90.0
+     ],
+     "speed": 180.0,
+     "acc": 300.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      88.5,
+      65.9,
+      -137.7,
+      71.8,
+      28.6
+     ],
+     "speed": 180.0,
+     "acc": 200.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      1.3,
+      57.7,
+      -137.7,
+      79.9,
+      -87.5
+     ],
+     "speed": 180.0,
+     "acc": 200.0,
+     "radius": 230.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -88.5,
+      65.9,
+      -137.7,
+      71.8,
+      -201.7
+     ],
+     "speed": 180.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 10,
+   "name": "Program 10",
+   "railProgram": 10,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -2.6,
+      32.6,
+      -125.5,
+      92.9,
+      -192.7
+     ],
+     "speed": 80.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      134.1,
+      82.5,
+      -161.3,
+      79.2,
+      -24.9
+     ],
+     "speed": 80.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -2.6,
+      32.6,
+      -125.5,
+      92.9,
+      -192.7
+     ],
+     "speed": 50.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 11,
+   "name": "Program 11",
+   "railProgram": 11,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -74.5,
+      58.8,
+      -150.9,
+      92.1,
+      -187.4
+     ],
+     "speed": 100.0,
+     "acc": 300.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -2.1,
+      116.3,
+      -129.4,
+      -17.2,
+      -90.0
+     ],
+     "speed": 100.0,
+     "acc": 300.0,
+     "radius": 700.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      82.5,
+      58.8,
+      -150.9,
+      92.1,
+      20.0
+     ],
+     "speed": 100.0,
+     "acc": 300.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -2.1,
+      116.3,
+      -129.4,
+      -17.2,
+      -90.0
+     ],
+     "speed": 100.0,
+     "acc": 300.0,
+     "radius": 700.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -74.5,
+      58.8,
+      -150.9,
+      92.1,
+      -187.4
+     ],
+     "speed": 100.0,
+     "acc": 300.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 12,
+   "name": "Program 12",
+   "railProgram": 12,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      90.0,
+      -180.0,
+      90.0,
+      25.7
+     ],
+     "speed": 90.0,
+     "acc": 600.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      -80.1,
+      -187.6,
+      -90.0,
+      -18.8
+     ],
+     "speed": 90.0,
+     "acc": 600.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      90.0,
+      -180.0,
+      90.0,
+      25.7
+     ],
+     "speed": 90.0,
+     "acc": 600.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 13,
+   "name": "Program 13",
+   "railProgram": 13,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -53.5,
+      -2.0,
+      55.5,
+      -90.0
+     ],
+     "speed": 120.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -39.2,
+      -3.4,
+      -38.3,
+      41.7,
+      -135.5
+     ],
+     "speed": 120.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -18.1,
+      -101.8,
+      135.9,
+      -90.0
+     ],
+     "speed": 120.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      33.4,
+      26.6,
+      -88.3,
+      61.7,
+      -43.1
+     ],
+     "speed": 120.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      24.1,
+      -102.1,
+      80.9,
+      -90.0
+     ],
+     "speed": 120.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      68.2,
+      -150.1,
+      81.9,
+      -90.0
+     ],
+     "speed": 120.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "line",
+     "pose": [
+      205.3,
+      0.0,
+      132.1,
+      180.0,
+      0.0,
+      90.0
+     ],
+     "speed": 1000.0,
+     "acc": 1000.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -53.5,
+      -2.0,
+      55.5,
+      -90.0
+     ],
+     "speed": 120.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 14,
+   "name": "Program 14",
+   "railProgram": 14,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      1.4,
+      -148.3,
+      166.2,
+      -90.0
+     ],
+     "speed": 115.0,
+     "acc": 600.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      59.0,
+      -127.4,
+      68.4,
+      -90.0
+     ],
+     "speed": 115.0,
+     "acc": 600.0,
+     "radius": 0.0,
+     "pauseAfter": 0.3
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      180.0,
+      62.7,
+      -126.2,
+      63.5,
+      15.3
+     ],
+     "speed": 100.0,
+     "acc": 200.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      62.7,
+      -126.2,
+      63.5,
+      -199.0
+     ],
+     "speed": 100.0,
+     "acc": 200.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      59.0,
+      -127.4,
+      68.4,
+      -90.0
+     ],
+     "speed": 100.0,
+     "acc": 200.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      1.4,
+      -148.3,
+      166.2,
+      -90.0
+     ],
+     "speed": 100.0,
+     "acc": 200.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 15,
+   "name": "Program 15",
+   "railProgram": 15,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -62.8,
+      55.8,
+      -116.8,
+      61.0,
+      -178.0
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -62.8,
+      55.8,
+      -116.8,
+      31.0,
+      -178.0
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": 50.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -62.8,
+      55.8,
+      -116.8,
+      91.0,
+      -178.0
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": 50.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -62.8,
+      55.8,
+      -116.8,
+      61.0,
+      -178.0
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      55.9,
+      -123.2,
+      65.9,
+      -90.0
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -73.9,
+      -1.7,
+      80.8,
+      -90.0
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      55.9,
+      -123.2,
+      65.9,
+      -90.0
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      62.8,
+      55.8,
+      -116.8,
+      61.0,
+      15.2
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      62.8,
+      55.8,
+      -116.8,
+      31.0,
+      15.2
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": 50.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      62.8,
+      55.8,
+      -116.8,
+      91.0,
+      15.2
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": 50.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      62.8,
+      55.8,
+      -116.8,
+      61.0,
+      15.2
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      55.9,
+      -123.2,
+      65.9,
+      -90.0
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -73.9,
+      -1.7,
+      80.8,
+      -90.0
+     ],
+     "speed": 170.0,
+     "acc": 600.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      55.9,
+      -123.2,
+      65.9,
+      -90.0
+     ],
+     "speed": 170.0,
+     "acc": 600.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -62.8,
+      55.8,
+      -116.8,
+      61.0,
+      -178.0
+     ],
+     "speed": 110.0,
+     "acc": 350.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 16,
+   "name": "Program 16",
+   "railProgram": 16,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -73.5,
+      52.7,
+      -161.2,
+      108.5,
+      -187.3
+     ],
+     "speed": 150.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      52.8,
+      75.6,
+      -123.9,
+      48.3,
+      -12.6
+     ],
+     "speed": 150.0,
+     "acc": 300.0,
+     "radius": 100.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      73.5,
+      52.7,
+      -161.2,
+      108.5,
+      4.7
+     ],
+     "speed": 150.0,
+     "acc": 300.0,
+     "radius": 100.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -52.8,
+      75.6,
+      -123.9,
+      48.3,
+      -169.2
+     ],
+     "speed": 150.0,
+     "acc": 300.0,
+     "radius": 100.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -73.5,
+      52.7,
+      -161.2,
+      108.5,
+      -187.3
+     ],
+     "speed": 150.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 17,
+   "name": "Program 17",
+   "railProgram": 17,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -83.7,
+      -59.4,
+      6.9,
+      52.5,
+      -187.2
+     ],
+     "speed": 180.0,
+     "acc": 1146.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      91.5,
+      -21.5,
+      -10.0,
+      31.5,
+      1.4
+     ],
+     "speed": 180.0,
+     "acc": 1146.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -83.7,
+      -59.4,
+      6.9,
+      52.5,
+      -187.2
+     ],
+     "speed": 180.0,
+     "acc": 1146.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      91.5,
+      -21.5,
+      -10.0,
+      31.5,
+      7.7
+     ],
+     "speed": 180.0,
+     "acc": 1146.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -83.7,
+      -59.4,
+      6.9,
+      52.5,
+      -179.3
+     ],
+     "speed": 180.0,
+     "acc": 1146.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      91.5,
+      -21.5,
+      -10.0,
+      31.5,
+      17.1
+     ],
+     "speed": 180.0,
+     "acc": 1146.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -83.7,
+      -59.4,
+      6.9,
+      52.5,
+      -170.2
+     ],
+     "speed": 180.0,
+     "acc": 1146.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      22.2,
+      -88.6,
+      66.3,
+      -96.8
+     ],
+     "speed": 150.0,
+     "acc": 900.0,
+     "radius": 300.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -83.7,
+      -59.4,
+      6.9,
+      52.5,
+      -187.2
+     ],
+     "speed": 150.0,
+     "acc": 900.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 18,
+   "name": "Program 18",
+   "railProgram": 18,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -67.6,
+      107.3,
+      -175.5,
+      68.3,
+      -184.0
+     ],
+     "speed": 100.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -39.5,
+      20.0,
+      -71.2,
+      51.2,
+      -149.1
+     ],
+     "speed": 100.0,
+     "acc": 300.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      9.9,
+      46.4,
+      -127.2,
+      84.2,
+      -87.4
+     ],
+     "speed": 100.0,
+     "acc": 300.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      87.8,
+      71.1,
+      -145.4,
+      74.3,
+      24.2
+     ],
+     "speed": 100.0,
+     "acc": 300.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      69.9,
+      6.5,
+      -63.3,
+      56.8,
+      -7.7
+     ],
+     "speed": 130.0,
+     "acc": 800.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      31.1,
+      -11.6,
+      -36.0,
+      47.7,
+      -53.3
+     ],
+     "speed": 130.0,
+     "acc": 800.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      6.9,
+      16.1,
+      -78.2,
+      62.2,
+      -80.4
+     ],
+     "speed": 130.0,
+     "acc": 800.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      7.3,
+      66.9,
+      -141.7,
+      69.1,
+      -79.7
+     ],
+     "speed": 130.0,
+     "acc": 800.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -31.9,
+      96.3,
+      -203.2,
+      106.9,
+      -134.1
+     ],
+     "speed": 130.0,
+     "acc": 800.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -45.6,
+      56.6,
+      -109.7,
+      53.1,
+      -152.5
+     ],
+     "speed": 150.0,
+     "acc": 1000.0,
+     "radius": -1.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -67.6,
+      107.3,
+      -175.5,
+      68.3,
+      -184.0
+     ],
+     "speed": 20.0,
+     "acc": 100.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 19,
+   "name": "Program 19",
+   "railProgram": 19,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      10.5,
+      61.6,
+      -131.0,
+      67.7,
+      -79.1
+     ],
+     "speed": 90.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      8.2,
+      -49.3,
+      -13.2,
+      66.6,
+      -85.3
+     ],
+     "speed": 90.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      8.2,
+      -49.3,
+      -13.2,
+      66.6,
+      -78.5
+     ],
+     "speed": 10.0,
+     "acc": 50.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      4.0,
+      57.1,
+      -126.0,
+      70.0,
+      -81.1
+     ],
+     "speed": 90.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      7.6,
+      -4.4,
+      -123.4,
+      145.9,
+      -80.3
+     ],
+     "speed": 50.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      52.5,
+      -1.5,
+      -59.1,
+      60.6,
+      -25.5
+     ],
+     "speed": 60.0,
+     "acc": 250.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      26.8,
+      28.7,
+      -91.1,
+      65.7,
+      -58.6
+     ],
+     "speed": 40.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      14.2,
+      -7.9,
+      -55.7,
+      68.4,
+      -76.5
+     ],
+     "speed": 40.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      11.1,
+      38.6,
+      -72.2,
+      31.8,
+      -73.4
+     ],
+     "speed": 40.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -14.7,
+      6.8,
+      -22.1,
+      15.3,
+      -112.3
+     ],
+     "speed": 40.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.2
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      28.2,
+      40.5,
+      -96.8,
+      56.2,
+      -55.9
+     ],
+     "speed": 40.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      10.5,
+      61.6,
+      -131.0,
+      67.7,
+      -79.1
+     ],
+     "speed": 40.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -26.8,
+      68.5,
+      -140.1,
+      71.6,
+      -133.5
+     ],
+     "speed": 40.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      10.5,
+      61.6,
+      -131.0,
+      67.7,
+      -79.1
+     ],
+     "speed": 40.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 20,
+   "name": "Program 20",
+   "railProgram": 20,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -46.4,
+      101.8,
+      -171.2,
+      69.3,
+      -153.1
+     ],
+     "speed": 60.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -73.7,
+      68.6,
+      -137.7,
+      69.0,
+      -182.6
+     ],
+     "speed": 60.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -42.3,
+      -0.8,
+      -3.2,
+      4.0,
+      -137.6
+     ],
+     "speed": 120.0,
+     "acc": 300.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -21.2,
+      -2.5,
+      -46.6,
+      49.1,
+      -118.2
+     ],
+     "speed": 80.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -13.4,
+      35.0,
+      -85.3,
+      50.3,
+      -108.8
+     ],
+     "speed": 80.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      77.8,
+      -145.0,
+      61.5,
+      -90.0
+     ],
+     "speed": 80.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      34.7,
+      47.6,
+      -114.8,
+      67.2,
+      -44.0
+     ],
+     "speed": 80.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      52.0,
+      29.6,
+      -78.7,
+      49.1,
+      -26.5
+     ],
+     "speed": 80.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      7.8,
+      83.3,
+      -154.3,
+      65.7,
+      -79.3
+     ],
+     "speed": 80.0,
+     "acc": 200.0,
+     "radius": -1.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -46.4,
+      101.8,
+      -171.2,
+      69.3,
+      -153.1
+     ],
+     "speed": 20.0,
+     "acc": 100.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 21,
+   "name": "Program 21",
+   "railProgram": 21,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -2.7,
+      35.5,
+      -147.5,
+      111.9,
+      -196.2
+     ],
+     "speed": 130.0,
+     "acc": 700.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      82.5,
+      -161.3,
+      79.2,
+      -90.0
+     ],
+     "speed": 130.0,
+     "acc": 700.0,
+     "radius": -1.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -2.7,
+      35.5,
+      -147.5,
+      111.9,
+      -196.2
+     ],
+     "speed": 35.0,
+     "acc": 700.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 22,
+   "name": "Program 22",
+   "railProgram": 22,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      -72.8,
+      -21.9,
+      94.7,
+      -90.0
+     ],
+     "speed": 180.0,
+     "acc": 1146.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "line",
+     "pose": [
+      0.0,
+      660.3,
+      103.2,
+      180.0,
+      0.0,
+      180.0
+     ],
+     "speed": 1000.0,
+     "acc": 2000.0,
+     "radius": -1.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      -72.8,
+      -21.9,
+      94.7,
+      -90.0
+     ],
+     "speed": 80.0,
+     "acc": 1146.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 23,
+   "name": "Program 23",
+   "railProgram": 23,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -181.0,
+      -13.7,
+      -161.9,
+      -28.0,
+      -83.5
+     ],
+     "speed": 150.0,
+     "acc": 250.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -182.4,
+      -97.3,
+      -161.9,
+      74.5,
+      -77.5
+     ],
+     "speed": 150.0,
+     "acc": 250.0,
+     "radius": -1.0,
+     "pauseAfter": 0.4
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -180.0,
+      -13.7,
+      -161.9,
+      -28.0,
+      -91.7
+     ],
+     "speed": 150.0,
+     "acc": 250.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -132.3,
+      -116.0,
+      -173.2,
+      111.4,
+      -160.6
+     ],
+     "speed": 150.0,
+     "acc": 250.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -178.7,
+      -106.8,
+      -34.9,
+      -54.1,
+      -101.6
+     ],
+     "speed": 150.0,
+     "acc": 250.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -128.1,
+      -110.4,
+      -181.5,
+      112.0,
+      -148.5
+     ],
+     "speed": 150.0,
+     "acc": 250.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -180.9,
+      -82.1,
+      -218.3,
+      118.8,
+      -78.6
+     ],
+     "speed": 120.0,
+     "acc": 250.0,
+     "radius": -1.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -181.0,
+      -13.7,
+      -161.9,
+      -28.0,
+      -83.5
+     ],
+     "speed": 30.0,
+     "acc": 100.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 24,
+   "name": "Program 24",
+   "railProgram": 24,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -0.4,
+      -183.7,
+      -19.6,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -99.9,
+      -164.7,
+      80.8,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 50.0,
+     "radius": 60.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -0.4,
+      -183.7,
+      -19.6,
+      -90.0
+     ],
+     "speed": 50.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 25,
+   "name": "Program 25",
+   "railProgram": 25,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      -72.8,
+      -21.9,
+      94.7,
+      -90.0
+     ],
+     "speed": 100.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "line",
+     "pose": [
+      0.0,
+      577.3,
+      290.5,
+      180.0,
+      0.0,
+      180.0
+     ],
+     "speed": 600.0,
+     "acc": 1200.0,
+     "radius": 60.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      -72.8,
+      -21.9,
+      94.7,
+      -90.0
+     ],
+     "speed": 80.0,
+     "acc": 200.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 26,
+   "name": "Program 26",
+   "railProgram": 26,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -3.0,
+      11.1,
+      -102.4,
+      91.3,
+      -200.6
+     ],
+     "speed": 180.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      150.5,
+      49.3,
+      -110.4,
+      61.0,
+      -16.1
+     ],
+     "speed": 180.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 2.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -3.0,
+      11.1,
+      -102.4,
+      91.3,
+      -200.6
+     ],
+     "speed": 60.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 27,
+   "name": "Program 27",
+   "railProgram": 27,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      0.0,
+      -177.5,
+      -23.4,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 40.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -93.7,
+      -209.4,
+      123.8,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 40.0,
+     "radius": 500.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -174.5,
+      -98.9,
+      -213.5,
+      133.2,
+      9.7
+     ],
+     "speed": 70.0,
+     "acc": 40.0,
+     "radius": 0.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      0.0,
+      -177.5,
+      -23.4,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 40.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 28,
+   "name": "Program 28",
+   "railProgram": 28,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -60.4,
+      -43.1,
+      -65.8,
+      90.0
+     ],
+     "speed": 180.0,
+     "acc": 60.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      73.3,
+      -160.6,
+      -91.7,
+      90.0
+     ],
+     "speed": 180.0,
+     "acc": 60.0,
+     "radius": 400.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      56.8,
+      115.0,
+      -198.7,
+      -96.0,
+      19.5
+     ],
+     "speed": 180.0,
+     "acc": 60.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -63.2,
+      115.0,
+      -198.7,
+      -96.0,
+      165.7
+     ],
+     "speed": 180.0,
+     "acc": 60.0,
+     "radius": -1.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      0.0,
+      -60.4,
+      -43.1,
+      -65.8,
+      90.0
+     ],
+     "speed": 60.0,
+     "acc": 60.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 29,
+   "name": "Program 29",
+   "railProgram": 29,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -181.0,
+      -13.7,
+      -161.9,
+      -28.0,
+      -90.0
+     ],
+     "speed": 120.0,
+     "acc": 40.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -132.3,
+      -116.0,
+      -173.2,
+      109.2,
+      -151.2
+     ],
+     "speed": 120.0,
+     "acc": 40.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -178.7,
+      -106.8,
+      -34.9,
+      -54.1,
+      -90.0
+     ],
+     "speed": 100.0,
+     "acc": 50.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -128.1,
+      -110.4,
+      -181.5,
+      112.4,
+      -156.3
+     ],
+     "speed": 100.0,
+     "acc": 50.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -180.9,
+      -82.1,
+      -218.3,
+      118.8,
+      -86.0
+     ],
+     "speed": 120.0,
+     "acc": 60.0,
+     "radius": -1.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -181.0,
+      -13.7,
+      -161.9,
+      -28.0,
+      -90.0
+     ],
+     "speed": 30.0,
+     "acc": 100.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 30,
+   "name": "Program 30",
+   "railProgram": 30,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -0.4,
+      -183.7,
+      -19.6,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -99.9,
+      -164.7,
+      80.8,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -146.1,
+      -98.2,
+      -164.7,
+      83.5,
+      -14.8
+     ],
+     "speed": 70.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -33.9,
+      -98.2,
+      -164.7,
+      83.5,
+      -164.0
+     ],
+     "speed": 70.0,
+     "acc": 50.0,
+     "radius": 60.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -0.4,
+      -183.7,
+      -19.6,
+      -90.0
+     ],
+     "speed": 50.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 31,
+   "name": "Program 31",
+   "railProgram": 31,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      -72.8,
+      -21.9,
+      94.7,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "line",
+     "pose": [
+      0.0,
+      577.3,
+      290.5,
+      180.0,
+      0.0,
+      180.0
+     ],
+     "speed": 400.0,
+     "acc": 800.0,
+     "radius": 60.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      150.5,
+      11.2,
+      -83.8,
+      72.7,
+      -15.9
+     ],
+     "speed": 30.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      -72.8,
+      -21.9,
+      94.7,
+      -90.0
+     ],
+     "speed": 80.0,
+     "acc": 200.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 32,
+   "name": "Program 32",
+   "railProgram": 32,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -2.2,
+      60.6,
+      -137.7,
+      77.1,
+      -201.5
+     ],
+     "speed": 100.0,
+     "acc": 700.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      30.1,
+      -142.3,
+      116.3,
+      -91.7
+     ],
+     "speed": 100.0,
+     "acc": 700.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -2.2,
+      60.6,
+      -137.7,
+      77.1,
+      -201.5
+     ],
+     "speed": 30.0,
+     "acc": 700.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 33,
+   "name": "Program 33",
+   "railProgram": 33,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -69.3,
+      57.9,
+      -128.5,
+      70.6,
+      -160.0
+     ],
+     "speed": 50.0,
+     "acc": 100.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "line",
+     "pose": [
+      245.5,
+      67.6,
+      115.5,
+      180.0,
+      0.0,
+      90.0
+     ],
+     "speed": 600.0,
+     "acc": 600.0,
+     "radius": 150.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "line",
+     "pose": [
+      245.0,
+      582.9,
+      340.4,
+      180.0,
+      0.0,
+      90.0
+     ],
+     "speed": 600.0,
+     "acc": 600.0,
+     "radius": -1.0,
+     "pauseAfter": 2.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -69.3,
+      57.9,
+      -128.5,
+      70.6,
+      -160.0
+     ],
+     "speed": 50.0,
+     "acc": 100.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 34,
+   "name": "Program 34",
+   "railProgram": 34,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -69.2,
+      56.4,
+      -142.6,
+      86.2,
+      -160.0
+     ],
+     "speed": 50.0,
+     "acc": 100.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "line",
+     "pose": [
+      244.8,
+      55.0,
+      217.5,
+      180.0,
+      0.0,
+      90.0
+     ],
+     "speed": 600.0,
+     "acc": 600.0,
+     "radius": 150.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "line",
+     "pose": [
+      244.8,
+      644.6,
+      217.6,
+      180.0,
+      0.0,
+      90.0
+     ],
+     "speed": 600.0,
+     "acc": 600.0,
+     "radius": -1.0,
+     "pauseAfter": 2.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -69.2,
+      56.4,
+      -142.6,
+      86.2,
+      -160.0
+     ],
+     "speed": 50.0,
+     "acc": 100.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 35,
+   "name": "Program 35",
+   "railProgram": 35,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -69.2,
+      56.4,
+      -142.6,
+      86.2,
+      -160.0
+     ],
+     "speed": 50.0,
+     "acc": 90.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      69.2,
+      56.5,
+      -142.7,
+      86.3,
+      -20.8
+     ],
+     "speed": 50.0,
+     "acc": 90.0,
+     "radius": -1.0,
+     "pauseAfter": 2.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -69.2,
+      56.4,
+      -142.6,
+      86.2,
+      -160.0
+     ],
+     "speed": 50.0,
+     "acc": 90.0,
+     "radius": -1.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 36,
+   "name": "Program 36",
+   "railProgram": 36,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      -72.8,
+      -21.9,
+      94.7,
+      -90.0
+     ],
+     "speed": 60.0,
+     "acc": 500.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "line",
+     "pose": [
+      0.0,
+      660.3,
+      290.8,
+      180.0,
+      0.0,
+      180.0
+     ],
+     "speed": 400.0,
+     "acc": 2000.0,
+     "radius": 60.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      16.3,
+      -159.5,
+      151.0,
+      -90.0
+     ],
+     "speed": 55.0,
+     "acc": 200.0,
+     "radius": 0.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      -72.8,
+      -21.9,
+      94.7,
+      -90.0
+     ],
+     "speed": 60.0,
+     "acc": 200.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 37,
+   "name": "Program 37",
+   "railProgram": 37,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -99.9,
+      -164.7,
+      80.8,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -0.4,
+      -183.7,
+      -19.6,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 50.0,
+     "radius": 60.0,
+     "pauseAfter": 1.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      -90.0,
+      -99.9,
+      -164.7,
+      80.8,
+      -90.0
+     ],
+     "speed": 50.0,
+     "acc": 50.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  },
+  {
+   "number": 38,
+   "name": "Program 38",
+   "railProgram": 38,
+   "armDelay": 0.0,
+   "note": "",
+   "steps": [
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      46.5,
+      -137.6,
+      91.1,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 390.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    },
+    {
+     "kind": "line",
+     "pose": [
+      0.0,
+      155.0,
+      290.5,
+      180.0,
+      0.0,
+      180.0
+     ],
+     "speed": 280.0,
+     "acc": 2000.0,
+     "radius": 60.0,
+     "pauseAfter": 2.0
+    },
+    {
+     "kind": "joint",
+     "joints": [
+      90.0,
+      46.5,
+      -137.6,
+      91.1,
+      -90.0
+     ],
+     "speed": 70.0,
+     "acc": 390.0,
+     "radius": 0.0,
+     "pauseAfter": 0.0
+    }
+   ]
+  }
+ ]
+}

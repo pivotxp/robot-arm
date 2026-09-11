@@ -1,0 +1,17 @@
+# Build output
+build/
+DerivedData/
+*.ipa
+*.xcarchive
+
+# macOS
+.DS_Store
+
+# Xcode user data
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+Packages/

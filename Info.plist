@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The rail's Siemens PLC web server uses an old self-signed certificate. Without this key
+	     iOS refuses to talk to https://192.168.1.2 at all. It only relaxes the rule for local
+	     (192.168.x.x) addresses, never for the public internet. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- Show the app's Documents folder (the program files) in the Files app, so a program can
+	     also be edited as plain text if you ever want to. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+</dict>
+</plist>
