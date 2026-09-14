@@ -1,4 +1,5 @@
 import AVKit
+import Photos
 import SwiftUI
 
 /// The booth screen: the camera, one CAPTURE button, and what is happening. Nothing else — no
@@ -36,7 +37,12 @@ struct BoothView: View {
         .background(Color.black)
         .statusBarHidden(true)
         .task {
+            // Both permissions now, while the crew is at the iPad — not mid-capture in front of a
+            // guest, where the system dialog would cover the screen at the worst moment.
             await Recorder.prepareAuthorization()
+            if PHPhotoLibrary.authorizationStatus(for: .addOnly) == .notDetermined {
+                _ = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+            }
             await recorder.start()
         }
         .onDisappear { recorder.stop() }

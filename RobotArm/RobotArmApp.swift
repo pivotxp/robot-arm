@@ -106,6 +106,7 @@ struct StatusStrip: View {
 //
 //   xcrun devicectl device process launch --device <id> com.pivotxp.armcontrol -- -measure 14
 //   xcrun devicectl device process launch --device <id> com.pivotxp.armcontrol -- -run 14
+//   xcrun devicectl device process launch --device <id> com.pivotxp.armcontrol -- -capture YES
 //
 // `-measure N` fires rail program N with the arm standing still and writes to robotarm.log whether
 // the control box raised N on the six wires, and how long after the trigger. `-run N` runs program
@@ -115,9 +116,10 @@ extension RobotArmApp {
         let d = UserDefaults.standard
         let measure = d.object(forKey: "measure") != nil ? d.integer(forKey: "measure") : nil
         let run = d.object(forKey: "run") != nil ? d.integer(forKey: "run") : nil
-        guard measure != nil || run != nil else { return }
+        let capture = d.bool(forKey: "capture")
+        guard measure != nil || run != nil || capture else { return }
 
-        Log.write("launch request: \(measure.map { "measure \($0)" } ?? "") \(run.map { "run \($0)" } ?? "")")
+        Log.write("launch request: \(measure.map { "measure \($0)" } ?? "") \(run.map { "run \($0)" } ?? "")\(capture ? "capture" : "")")
         // Two minutes: long enough to plug the Ethernet in after launching from the Mac.
         for _ in 0..<240 where !(arm.connected && rail.connected) {
             try? await Task.sleep(nanoseconds: 500_000_000)
@@ -126,7 +128,14 @@ extension RobotArmApp {
             Log.write("launch request: gave up — arm \(arm.connected ? "up" : "DOWN"), rail \(rail.connected ? "up" : "DOWN")")
             return
         }
-        if let n = measure {
+        if capture {
+            // The whole booth flow, exactly as the CAPTURE button does it. Needs the booth
+            // screen up (it owns the camera) and a program chosen under Booth.
+            booth.locked = true
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            if let why = CaptureFlow.shared.blocker { Log.write("launch request: capture refused — \(why)") }
+            else { CaptureFlow.shared.capture() }
+        } else if let n = measure {
             runner.measureSignal(railProgram: n)
         } else if let n = run, let p = store.program(n) {
             runner.run(p)
