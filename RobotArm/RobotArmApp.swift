@@ -107,7 +107,7 @@ struct StatusStrip: View {
 //
 //   xcrun devicectl device process launch --device <id> com.pivotxp.armcontrol -- -measure 14
 //   xcrun devicectl device process launch --device <id> com.pivotxp.armcontrol -- -run 14
-//   xcrun devicectl device process launch --device <id> com.pivotxp.armcontrol -- -capture YES
+//   xcrun devicectl device process launch --device <id> com.pivotxp.armcontrol -- -capture YES -program 14
 //
 // `-measure N` fires rail program N with the arm standing still and writes to robotarm.log whether
 // the control box raised N on the six wires, and how long after the trigger. `-run N` runs program
@@ -131,7 +131,9 @@ extension RobotArmApp {
         }
         if capture {
             // The whole booth flow, exactly as the CAPTURE button does it. Needs the booth
-            // screen up (it owns the camera) and a program chosen under Booth.
+            // screen up (it owns the camera) and a program chosen under Booth — or given here
+            // with `-program N`, which also sets it for the button.
+            if let p = d.string(forKey: "program"), let n = Int(p) { booth.program = n }
             booth.locked = true
             try? await Task.sleep(nanoseconds: 2_000_000_000)
             if let why = CaptureFlow.shared.blocker { Log.write("launch request: capture refused — \(why)") }
