@@ -252,12 +252,12 @@ final class CaptureFlow: ObservableObject {
 
         fired = false
         recStart = nil
-        // Prewarm while the guest steps in and the 3-2-1 runs: load + energise the rail so only the
-        // trigger pulse is left at GO. Only prewarm/enable the ARM for old app-driven programs —
-        // for a self-running program the app must stay off the arm.
+        // Prewarm / arm only for OLD app-driven programs. A self-running program is fired the
+        // original way (raw packet) and the app never touches the arm or the rail over HTTPS during
+        // the shot — the background auto-loop keeps the rail energised.
         let prewarm = Task { @MainActor in driveArm ? await runner.prewarm() : nil }
         let railReady = Task { @MainActor in
-            if let n = program.railProgram { return await rail.armProgram(n) }
+            if driveArm, let n = program.railProgram { return await rail.armProgram(n) }
             return true
         }
         let total = Double(booth.countdown)
@@ -266,12 +266,22 @@ final class CaptureFlow: ObservableObject {
         let fireTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(fireAt * 1_000_000_000))
             if Task.isCancelled { return }
+
+            if selfRunning, let n = program.railProgram {
+                // 🔑 THE ORIGINAL MECHANISM (CanonPivotBot): one RAW packet to the PLC on port 2000.
+                // The PLC runs program 14 — the rail moves AND it raises the six wires, and the
+                // robot's onboard program 14 runs the arm off that cue. The HTTPS RunProgram pulse
+                // moved the rail but did NOT cue the arm (build 147: "only sliding forward"); the raw
+                // trigger is what the arm is wired to respond to. Camera rolls on the same beat.
+                self.goNow(program, onCanon: onCanon, filming: filming, driveArm: false)
+                _ = await rail.sendRawProgram(n)
+                return
+            }
+
             _ = await prewarm.value
             _ = await railReady.value                 // make sure the rail is loaded before we pulse
             let sync = max(0, booth.armSync)
             if let n = program.railProgram {
-                // The pulse fires the rail AND (via the six wires) cues the robot's onboard arm move.
-                // The camera rolls on the same beat. For an app-driven program we also launch the arm.
                 _ = await rail.firePulse(n) { [weak self] in
                     guard let self else { return }
                     if sync <= 0 {
