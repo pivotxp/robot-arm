@@ -109,8 +109,26 @@ final class Canon: ObservableObject {
     /// Probe the likely addresses. 192.0.0.1 first — that is where a Canon lands over a USB-C IP
     /// link (the iPad gets 192.0.0.2). Then the usual spots on every interface the iPad has. The
     /// rail and the arm are never probed.
+    /// A known address, e.g. "192.168.50.23:8080", tried before the scan. From Programs → Camera.
+    var knownHost: String {
+        get { UserDefaults.standard.string(forKey: "booth.canonHost") ?? "" }
+        set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespaces), forKey: "booth.canonHost") }
+    }
+
     private func discover() async -> URL? {
         var candidates = ["192.0.0.1"]
+        if !knownHost.isEmpty {
+            let raw = knownHost.hasPrefix("http") ? knownHost : (knownHost.contains(":443") ? "https://\(knownHost)" : "http://\(knownHost)")
+            if let url = URL(string: raw) {
+                var req = URLRequest(url: url.appendingPathComponent("ccapi/"))
+                req.timeoutInterval = 3
+                if let (_, resp) = try? await session.data(for: req),
+                   let http = resp as? HTTPURLResponse, http.statusCode < 500 {
+                    lastSearch = "found at \(raw)"
+                    return url
+                }
+            }
+        }
         for ip in localIPv4s() {
             let parts = ip.split(separator: ".")
             guard parts.count == 4, let last = Int(parts[3]) else { continue }

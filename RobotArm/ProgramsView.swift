@@ -22,6 +22,9 @@ struct ProgramsView: View {
     @State private var measureCode = 14
     @State private var showMeasure = false
 
+    private var canonHost: Binding<String> {
+        Binding(get: { canon.knownHost }, set: { canon.knownHost = $0 })
+    }
     private var usedCodes: Set<Int> { Set(store.programs.map(\.number)) }
     private var freeCodes: [Int] { RailCatalog.codes.filter { !usedCodes.contains($0) } }
 
@@ -84,6 +87,13 @@ struct ProgramsView: View {
                 if !canon.lastSearch.isEmpty, !canon.isReady {
                     Text(canon.lastSearch).font(.footnote).foregroundStyle(.secondary)
                 }
+                LabeledContent("Canon address (if on Wi-Fi)") {
+                    TextField("e.g. 192.168.50.23:8080", text: canonHost)
+                        .keyboardType(.numbersAndPunctuation)
+                        .autocorrectionDisabled()
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 240)
+                }
                 Button {
                     canon.searchAgain()
                 } label: {
@@ -92,7 +102,7 @@ struct ProgramsView: View {
             } header: {
                 Text("Camera")
             } footer: {
-                Text("The app looks for the Canon on its own, every few seconds, as soon as it is plugged into the hub (it appears at 192.0.0.1) or on the same Wi-Fi. CCAPI has to be enabled on the camera, and over the cable the camera's USB setting has to be the smartphone / Camera Connect mode.")
+                Text("The app looks for the Canon on its own every few seconds: on the cable (it appears at 192.0.0.1 when the camera's USB setting is the smartphone / Camera Connect mode) and at the usual spots on any Wi-Fi the iPad is on. If the camera is on Wi-Fi at some other address, type it here. CCAPI has to be enabled on the camera.")
             }
 
             Section {
