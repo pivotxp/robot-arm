@@ -29,6 +29,7 @@ struct RobotArmApp: App {
                 BoothTemplate.applyIfFresh()
                 arm.startAutoConnect()
                 rail.startAutoConnect()
+                Canon.shared.start()
                 Log.write("launch — build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?")")
                 Log.write("camera devices: \(Recorder.videoDeviceList())")
                 watchNetwork()
@@ -43,12 +44,13 @@ struct StatusStrip: View {
     @ObservedObject private var arm = ArmLink.shared
     @ObservedObject private var rail = RailLink.shared
     @ObservedObject private var runner = Runner.shared
+    @ObservedObject private var canon = Canon.shared
 
     var body: some View {
         HStack(spacing: 24) {
             light(on: arm.connected, label: "Arm", detail: armDetail)
             light(on: rail.connected, label: "Rail", detail: railDetail)
-            light(on: Recorder.canonAttached, label: "Canon", detail: Recorder.canonAttached ? "USB-C video" : "not detected")
+            light(on: canon.isReady, label: "Canon", detail: canon.label)
             Spacer()
             Text(runner.status)
                 .font(.title3)
@@ -143,7 +145,7 @@ extension RobotArmApp {
             // launch that replaced a running copy of the app can find the camera still held for
             // a second or two.
             for _ in 0..<20 where CaptureFlow.shared.blocker != nil {
-                if !Recorder.shared.isRunning { await Recorder.shared.start() }
+                if !booth.usesCanon, !Recorder.shared.isRunning { await Recorder.shared.start() }
                 try? await Task.sleep(nanoseconds: 500_000_000)
             }
             if let why = CaptureFlow.shared.blocker { Log.write("launch request: capture refused — \(why)") }

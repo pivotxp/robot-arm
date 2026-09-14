@@ -50,6 +50,11 @@ private enum EOS {
     static let getStorageIDs: UInt16        = 0x9101
     static let deleteObject: UInt16         = 0x9105  // (handle) — remove file from card
     static let getPartialObject: UInt16     = 0x9107  // (handle, offset, size) → data
+    /// Shutter. Press = (0x3 = AF + full press, 0); release = (0x3). Ported from PivotBooth's
+    /// still booth, where the earlier bug was releasing with 0x912A (RegistBackgroundImage) —
+    /// the press never let go and the next shot sat in Device-Busy for ~5 s.
+    static let remoteReleaseOn: UInt16      = 0x9128
+    static let remoteReleaseOff: UInt16     = 0x9129
     static let setDevicePropValueEx: UInt16 = 0x9110  // data: [u32 len][u32 prop][value]
     static let setRemoteMode: UInt16        = 0x9114  // (1) = PC-remote handshake
     static let setEventMode: UInt16         = 0x9115  // (1) = enable event reporting
@@ -643,6 +648,81 @@ final class CanonTetherController: NSObject, ObservableObject {
         }
         if !pendingObjects.isEmpty { return pendingObjects.removeFirst() }
         throw CanonTetherError.timeout("the camera to register the recorded clip")
+    }
+
+    // MARK: - EOS protocol: still capture
+
+    /// Fire the real shutter, wait for the JPEG to land on the card, pull it, delete it.
+    ///
+    /// 🔑 **The same three steps the movie path takes, for one frame.** Ported from PivotBooth's
+    /// still booth (`CanonTetherController.captureStill`), proven on this R8. The card delete is
+    /// best-effort and runs after the download so an event's worth of guests never fills the card.
+    func captureStill() async throws -> UIImage {
+        guard let cam = camera, case .ready = status else { throw CanonTetherError.notConnected }
+        guard phase == .idle else { throw CanonTetherError.alreadyRecording }
+        pendingObjects.removeAll()
+
+        // Drain the single PTP channel so the shutter never queues behind a live-view frame —
+        // this is what made the "fast first shot, slow second" inconsistency go away.
+        await ptpGate.wait(); ptpGate.signal()
+        _ = try? await fetchEvents(cam)
+        pendingObjects.removeAll()
+
+        let t0 = Date()
+        try await remoteRelease(cam)
+        let tShutter = Date()
+        let object = try await waitForNewPhotoObject(cam, timeout: 15)
+        let tRegister = Date()
+        let url = try await download(object, from: cam) { _ in }
+        let tDownload = Date()
+        Log.write(String(format: "canon: still — shutter %.0fms · register %.0fms · download %.0fms",
+                         tShutter.timeIntervalSince(t0) * 1000,
+                         tRegister.timeIntervalSince(tShutter) * 1000,
+                         tDownload.timeIntervalSince(tRegister) * 1000))
+        Task { await self.deleteCardObject(object.handle, from: cam) }
+
+        guard let data = try? Data(contentsOf: url), let image = UIImage(data: data) else {
+            throw CanonTetherError.transfer("could not decode the captured JPEG")
+        }
+        try? FileManager.default.removeItem(at: url)
+        return image
+    }
+
+    /// Press and release, retrying through Device-Busy the way the camera needs after a shot.
+    private func remoteRelease(_ cam: ICCameraDevice) async throws {
+        var attempts = 0
+        while true {
+            attempts += 1
+            let code = try await sendPTP(cam, op: EOS.remoteReleaseOn, params: [0x3, 0x0],
+                                         data: nil, label: "RemoteReleaseOn").response
+            if code == EOS.respOK {
+                if attempts > 1 { Log.write("canon: shutter fired after \(attempts) tries (camera was busy)") }
+                _ = try? await sendPTP(cam, op: EOS.remoteReleaseOff, params: [0x3],
+                                       data: nil, label: "RemoteReleaseOff")
+                return
+            }
+            _ = try? await sendPTP(cam, op: EOS.remoteReleaseOff, params: [0x3], data: nil, label: "RemoteReleaseOff")
+            if code == EOS.respDeviceBusy && attempts < 18 {
+                try await Task.sleep(nanoseconds: 100_000_000)
+                continue
+            }
+            Log.write("canon: shutter gave up after \(attempts) tries — 0x\(String(format: "%04X", code))")
+            throw CanonTetherError.ptp(op: "Shutter", code: code)
+        }
+    }
+
+    /// Wait until the event stream announces the JPEG from this shot.
+    private func waitForNewPhotoObject(_ cam: ICCameraDevice, timeout: TimeInterval) async throws -> NewObject {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if let i = pendingObjects.firstIndex(where: { !$0.looksLikeMovie }) {
+                return pendingObjects.remove(at: i)
+            }
+            if let events = try? await fetchEvents(cam) { pendingObjects.append(contentsOf: events) }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        if !pendingObjects.isEmpty { return pendingObjects.removeFirst() }
+        throw CanonTetherError.timeout("the camera to register the photo")
     }
 
     // MARK: - EOS protocol: download

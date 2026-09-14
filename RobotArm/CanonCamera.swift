@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import UIKit
 import SwiftUI
 
 /// The one Canon the rest of the app talks to. It can reach the camera two ways and uses
@@ -85,6 +86,13 @@ final class Canon: ObservableObject {
     }
 
     // MARK: Recording (routes to whichever is live)
+
+    /// One photo: shutter → card → pulled to the iPad → deleted from the card.
+    /// Over the USB tether only — that is the path with the real shutter.
+    func captureStill() async throws -> UIImage {
+        guard tether.isReadyToRecord else { throw CanonError.notReady }
+        return try await tether.captureStill()
+    }
 
     func startMovie() async throws {
         if tether.isReadyToRecord {

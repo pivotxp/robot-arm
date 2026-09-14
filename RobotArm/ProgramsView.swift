@@ -11,6 +11,7 @@ struct ProgramsView: View {
     @ObservedObject private var rail = RailLink.shared
     @ObservedObject private var runner = Runner.shared
     @ObservedObject private var booth = Booth.shared
+    @ObservedObject private var canon = Canon.shared
     @State private var showTemplate = false
     @State private var showPINChange = false
     @State private var confirmTemplate = false
@@ -21,6 +22,9 @@ struct ProgramsView: View {
     @State private var measureCode = 14
     @State private var showMeasure = false
 
+    private var canonHost: Binding<String> {
+        Binding(get: { canon.knownHost }, set: { canon.knownHost = $0 })
+    }
     private var usedCodes: Set<Int> { Set(store.programs.map(\.number)) }
     private var freeCodes: [Int] { RailCatalog.codes.filter { !usedCodes.contains($0) } }
 
@@ -79,11 +83,26 @@ struct ProgramsView: View {
             }
 
             Section {
-                LabeledContent("Canon over USB-C", value: Recorder.canonAttached ? "detected" : "not detected")
+                LabeledContent("Canon", value: canon.label)
+                if !canon.lastSearch.isEmpty, !canon.isReady {
+                    Text(canon.lastSearch).font(.footnote).foregroundStyle(.secondary)
+                }
+                LabeledContent("Canon address (if on Wi-Fi)") {
+                    TextField("e.g. 192.168.50.23:8080", text: canonHost)
+                        .keyboardType(.numbersAndPunctuation)
+                        .autocorrectionDisabled()
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 240)
+                }
+                Button {
+                    canon.searchAgain()
+                } label: {
+                    Label("Look for the Canon again", systemImage: "camera.badge.ellipsis")
+                }
             } header: {
                 Text("Camera")
             } footer: {
-                Text("The Canon is used over the USB-C cable as a video camera — set the camera to its movie / streaming (webcam / UVC) mode and iPadOS sees it as an external camera. No Wi-Fi, no CCAPI. Pick “Canon on the arm” under Booth to use it.")
+                Text("The app looks for the Canon on its own every few seconds: on the cable (it appears at 192.0.0.1 when the camera's USB setting is the smartphone / Camera Connect mode) and at the usual spots on any Wi-Fi the iPad is on. If the camera is on Wi-Fi at some other address, type it here. CCAPI has to be enabled on the camera.")
             }
 
             Section {
