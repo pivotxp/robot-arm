@@ -11,8 +11,8 @@ import UIKit
 /// One-time on the camera: CCAPI enabled (Canon developer registration), and for the cable the
 /// camera's USB connection set to the smartphone/Camera Connect mode so it presents the IP link.
 @MainActor
-final class Canon: ObservableObject {
-    static let shared = Canon()
+final class CanonCCAPI: ObservableObject {
+    static let shared = CanonCCAPI()
 
     enum Status: Equatable {
         case off
