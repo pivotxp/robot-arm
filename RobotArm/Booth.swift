@@ -307,9 +307,21 @@ final class CaptureFlow: ObservableObject {
             return
         }
 
-        let need = BoothTemplate.recordingSecondsNeeded + max(0, booth.tail)
-        while Date().timeIntervalSince(began) < need, !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: 100_000_000)
+        if selfRunning {
+            // Capture the WHOLE preset-14 move as one unit — record until the rail (and the arm
+            // running in step with it off the wires) has finished, so ALL the movement is in the
+            // clip, not just the first few seconds. Wait for it to actually start, then run to rest.
+            _ = await rail.waitUntilMoving(timeout: 15)
+            await rail.waitUntilStill(timeout: 45)
+            Log.write("capture: preset-14 unit move complete")
+            if booth.tail > 0, !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(max(0, booth.tail) * 1_000_000_000))
+            }
+        } else {
+            let need = BoothTemplate.recordingSecondsNeeded + max(0, booth.tail)
+            while Date().timeIntervalSince(began) < need, !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
         }
         if Task.isCancelled { return }
 
@@ -326,13 +338,6 @@ final class CaptureFlow: ObservableObject {
             raw = u
         }
         Log.write("capture: recorded \(raw.lastPathComponent)")
-
-        // Self-running: the rig is still completing its move after the clip is done. Hold the booth
-        // until the rail has returned so the next guest's CAPTURE can't re-trigger it mid-move.
-        if selfRunning {
-            await rail.waitUntilStill()
-            Log.write("capture: rig back at rest")
-        }
 
         phase = .idle
         note = nil
