@@ -14,7 +14,7 @@ of **steps** for the arm. A program lives at a **code** — one number the rail'
 understands, 0 to 63. The 39 factory programs (codes 0 to 38) are the ones that were on the arm
 when this app was made. The rail has moves stored at codes 1–15 and 17–38 (found by running every
 number on the real rail); code 0 is its home; every other code is empty on the rail, so a program
-you add there moves the arm only. **New program** (⋯ menu) puts a program at any free code.
+you add there moves the arm only. **New program** (the + button) puts a program at any free code.
 
 ## One-time iPad setup
 
@@ -52,7 +52,7 @@ The top strip is always there:
   says "no signal on the wires". **On a timer** — the arm starts straight after the trigger; only
   for when the wires are not connected.
 - *Extra seconds*: normally 0. Added after the signal (or the trigger).
-- *⋯ → Test the wires*: fires a rail program with the arm standing still and reports whether the
+- *The wires → Test the wires* (bottom of the Programs screen): fires a rail program with the arm standing still and reports whether the
   control box signalled that number and how long after the trigger. Do this once on a new rig.
 - *Steps, in order*: the arm does these one after another. Tap a step to change it, swipe left to
   delete, **Edit** to drag them into a new order, **Add a step** to add one.

@@ -32,11 +32,21 @@ struct ProgramsView: View {
                 Text("A code is one number the rail's control box understands, 0–63. Rail moves are stored at codes 1–15 and 17–38; every code can carry arm steps.")
             }
 
-            if let l = runner.lastSignal {
-                Section("The wires") {
-                    Label(String(format: "Last seen: program %d signalled %.2f s after the trigger", l.program, l.latency),
-                          systemImage: "waveform.path.ecg")
+            Section {
+                Button {
+                    showMeasure = true
+                } label: {
+                    Label("Test the wires", systemImage: "waveform.path.ecg")
                 }
+                .disabled(!rail.connected || !arm.connected || runner.running)
+                if let l = runner.lastSignal {
+                    Text(String(format: "Last seen: program %d signalled %.2f s after the trigger.", l.program, l.latency))
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("The wires")
+            } footer: {
+                Text("Fires a rail program with the arm standing still and reports whether the control box raised that number on the six wires into CI1–CI6, and how long after the trigger. Do this once on a new rig. The rail moves.")
             }
 
             Section {
@@ -63,26 +73,18 @@ struct ProgramsView: View {
         .navigationTitle("Programs")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        newCode = freeCodes.first ?? 63
-                        showNew = true
-                    } label: {
-                        Label("New program", systemImage: "plus")
-                    }
-                    Button {
-                        showMeasure = true
-                    } label: {
-                        Label("Test the wires", systemImage: "waveform.path.ecg")
-                    }
-                    .disabled(!rail.connected || !arm.connected || runner.running)
-                    Button {
-                        showTemplate = true
-                    } label: {
-                        Label("Video template", systemImage: "film")
-                    }
+                Button {
+                    newCode = freeCodes.first ?? 63
+                    showNew = true
                 } label: {
-                    Label("More", systemImage: "ellipsis.circle")
+                    Label("New program", systemImage: "plus")
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showTemplate = true
+                } label: {
+                    Label("Video template", systemImage: "film")
                 }
             }
         }
@@ -119,7 +121,7 @@ struct ProgramsView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Runs the rail program with the arm standing still, and reports whether the control box raised that number on the six wires and how long after the trigger. The rail MOVES.")
+            Text("Which rail program? The rail MOVES; the arm stays still.")
         }
         .navigationDestination(for: Int.self) { number in
             ProgramEditorView(number: number)
