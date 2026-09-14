@@ -62,6 +62,11 @@ final class Booth: ObservableObject {
     /// and rail move together the whole shot. Booth only; the authored program is left untouched.
     @Published var armSpeedScale: Double { didSet { d.set(armSpeedScale, forKey: "booth.armSpeedScale") } }
 
+    /// Seconds to record a self-running program's move (the arm+rail run their onboard programs; the
+    /// app can't watch the arm, so it records a fixed length rather than polling the flaky rail web
+    /// server, which wedges the trigger). Set this to cover the whole preset-14 move.
+    @Published var moveLength: Double { didSet { d.set(moveLength, forKey: "booth.moveLength") } }
+
     /// The crew PIN Kyle asked for. Changeable on the iPad under Booth; this is the value until
     /// one is set there.
     static let defaultPIN = "0485"
@@ -108,6 +113,7 @@ final class Booth: ObservableObject {
         preRoll = d.object(forKey: "booth.preRoll") as? Double ?? -1.0
         armSync = d.object(forKey: "booth.armSync") as? Double ?? 0.0
         armSpeedScale = d.object(forKey: "booth.armSpeedScale") as? Double ?? 1.0
+        moveLength = d.object(forKey: "booth.moveLength") as? Double ?? 20.0
         // Guests first, crew only when asked.
         locked = !d.bool(forKey: "booth.support")
     }
@@ -308,15 +314,15 @@ final class CaptureFlow: ObservableObject {
         }
 
         if selfRunning {
-            // Capture the WHOLE preset-14 move as one unit — record until the rail (and the arm
-            // running in step with it off the wires) has finished, so ALL the movement is in the
-            // clip, not just the first few seconds. Wait for it to actually start, then run to rest.
-            _ = await rail.waitUntilMoving(timeout: 15)
-            await rail.waitUntilStill(timeout: 45)
-            Log.write("capture: preset-14 unit move complete")
-            if booth.tail > 0, !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(max(0, booth.tail) * 1_000_000_000))
+            // Record the WHOLE preset-14 move for a fixed length — NO position polling. Polling the
+            // rail's flaky web server WHILE the trigger pulse was still going out wedged the server
+            // and delayed the rail 11 s (build 146). A fixed length keeps the link silent so the
+            // pulse fires instantly and the whole coordinated move is captured. Tune "Move length".
+            let moveLen = max(2, booth.moveLength) + max(0, booth.tail)
+            while Date().timeIntervalSince(began) < moveLen, !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 100_000_000)
             }
+            Log.write("capture: preset-14 move recorded (\(Fmt.num(booth.moveLength)) s)")
         } else {
             let need = BoothTemplate.recordingSecondsNeeded + max(0, booth.tail)
             while Date().timeIntervalSince(began) < need, !Task.isCancelled {

@@ -69,7 +69,14 @@ struct ProgramsView: View {
                     Text("Arm speed: \(Int(booth.armSpeedScale * 100))% of the program")
                         .font(.subheadline)
                     Slider(value: $booth.armSpeedScale, in: 0.2...1.0, step: 0.05)
-                    Text("Slows the arm so its sweep lasts as long as the rail's travel — lower until the arm and rail finish together. Only affects the booth; your saved program is unchanged.")
+                    Text("Slows the arm so its sweep lasts as long as the rail's travel — lower until the arm and rail finish together. Only affects the booth; your saved program is unchanged. (App-driven programs only.)")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                VStack(alignment: .leading) {
+                    Text("Move length: \(Fmt.num(booth.moveLength)) s")
+                        .font(.subheadline)
+                    Slider(value: $booth.moveLength, in: 5...35, step: 0.5)
+                    Text("How long to record a self-running program (14). Set it to cover the whole move — the arm runs its own onboard program off the rail, so the app records for this long rather than polling the rail (which wedges the trigger).")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Picker("Camera", selection: $booth.camera) {
