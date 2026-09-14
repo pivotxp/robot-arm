@@ -347,6 +347,33 @@ final class RailLink: ObservableObject {
     }
 
     /// The raw trigger port needs no login: bytes "1" then a digit. "10" = program 0 = stop.
+    /// Fire a program the way CanonPivotBot does: the two-plus-digit ASCII string "1"+program to
+    /// port 2000. No login, no session, and — crucially — the app does NOT touch the arm, so the
+    /// xArm's own onboard program runs the arm in sync with the rail, in hardware. This is the
+    /// proven booth trigger; the whole rig runs itself from this one packet.
+    @discardableResult
+    func sendRawProgram(_ number: Int) async -> Bool {
+        let n = min(63, max(0, number))
+        guard let port = NWEndpoint.Port(rawValue: Self.asciiPort) else { return false }
+        expectMotion(seconds: 45)
+        Log.write("rail: RAW trigger \"1\(n)\" → port 2000 (rig runs itself)")
+        return await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+            let conn = NWConnection(host: NWEndpoint.Host(Self.host), port: port, using: .tcp)
+            var done = false
+            func finish(_ ok: Bool) { guard !done else { return }; done = true; conn.cancel(); cont.resume(returning: ok) }
+            conn.stateUpdateHandler = { st in
+                switch st {
+                case .ready:
+                    conn.send(content: "1\(n)".data(using: .ascii), completion: .contentProcessed { err in finish(err == nil) })
+                case .failed, .cancelled: finish(false)
+                default: break
+                }
+            }
+            conn.start(queue: .global(qos: .userInitiated))
+            DispatchQueue.global().asyncAfter(deadline: .now() + 4) { finish(false) }
+        }
+    }
+
     private func rawStop() async {
         guard let port = NWEndpoint.Port(rawValue: Self.asciiPort) else { return }
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in

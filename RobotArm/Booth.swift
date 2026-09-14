@@ -38,10 +38,10 @@ final class Booth: ObservableObject {
     /// rail is triggered as 3-2-1 begins and spins up during the count.
     @Published var lead: Double { didSet { d.set(lead, forKey: "booth.lead") } }
 
-    /// Fine-tune: seconds the arm waits AFTER the rail starts moving before it joins. 0 = start
-    /// together. Measured from the rail's real motion, so it holds despite the rail's variable
-    /// spin-up. This is the one knob that sets how arm and rail sit together.
-    @Published var armLag: Double { didSet { d.set(armLag, forKey: "booth.armLag") } }
+    /// Pre-roll (CanonPivotBot's model): seconds the rig is fired relative to GO (the end of the
+    /// countdown, when recording starts). NEGATIVE gives the rig a head start DURING the countdown
+    /// so it is already moving at GO — this is how the rail/arm spin-up is hidden. 0 fires at GO.
+    @Published var preRoll: Double { didSet { d.set(preRoll, forKey: "booth.preRoll") } }
 
     /// The crew PIN Kyle asked for. Changeable on the iPad under Booth; this is the value until
     /// one is set there.
@@ -65,13 +65,13 @@ final class Booth: ObservableObject {
         // 14 is the move the booth is being built around. A capture that says "no program
         // chosen" on a fresh install is a dead button for no reason.
         program = d.object(forKey: "booth.program") as? Int ?? 14
-        countdown = d.object(forKey: "booth.countdown") as? Int ?? 3
+        countdown = d.object(forKey: "booth.countdown") as? Int ?? 5
         camera = d.string(forKey: "booth.camera") ?? "back"
         tail = d.object(forKey: "booth.tail") as? Double ?? 1.0
         // Default: fire the rig when the countdown STARTS, so the rail's HTTPS spin-up and the
         // wire cue overlap the 3-2-1 instead of following it. The slider can pull it back toward 0.
         lead = d.object(forKey: "booth.lead") as? Double ?? Double(d.object(forKey: "booth.countdown") as? Int ?? 3)
-        armLag = d.object(forKey: "booth.armLag") as? Double ?? 0
+        preRoll = d.object(forKey: "booth.preRoll") as? Double ?? -3.0
         // Guests first, crew only when asked.
         locked = !d.bool(forKey: "booth.support")
     }
@@ -134,7 +134,8 @@ final class CaptureFlow: ObservableObject {
     var blocker: String? {
         guard let n = booth.program else { return "No program chosen — Programs → Booth" }
         guard let p = store.program(n) else { return "Program \(n) no longer exists — Programs → Booth" }
-        if !arm.connected { return "Arm is not connected" }
+        let selfRunning = p.railProgram != nil        // the rig runs its own arm; the app doesn't
+        if !selfRunning, !arm.connected { return "Arm is not connected" }
         if booth.usesCanon {
             if !canon.isReady { return "Canon is not connected — \(canon.label)" }
         } else if !recorder.isRunning {
@@ -178,42 +179,46 @@ final class CaptureFlow: ObservableObject {
         let onCanon = booth.usesCanon && canon.isReady
         let filming = onCanon || recorder.isRunning
         if !filming { note = "No camera — the rig ran but nothing was recorded." }
+        let selfRunning = program.railProgram != nil
 
-        // 🔑 **Simple and immediate: 3-2-1, then the rig runs 14 on “1”.** The app drives the arm
-        // (there is no onboard program — the log proved the arm never self-runs), and the arm blends
-        // through its poses (Runner.defaultBlend) so it flows like the real program 14 instead of
-        // stopping at each pose. The rail is fired during the count so it is ready on “1”; the arm
-        // is launched the instant the count ends. No wire cue, no self-run wait, no fallback — those
-        // were the delay.
-        let prewarm = Task { await runner.prewarm() }
-        let railTask: Task<String?, Never>? = program.railProgram == nil ? nil : Task { @MainActor in
-            await runner.boothFireRail(program)        // fires the rail; does not move the arm
+        // 🔑 **CanonPivotBot's model — the rig runs ITSELF.** For a rail program the app sends ONE
+        // packet ("1"+program to port 2000) and the PLC + the xArm's onboard program do the whole
+        // move, in sync, in hardware — smooth, identical every run. The app must NOT drive or even
+        // hold the arm (that blocks the onboard program and makes it stutter), so it releases the
+        // arm link first. Two clocks from START: the rig fires `preRoll` before GO (a head start so
+        // it is already moving at GO), and recording starts exactly at GO.
+        if selfRunning { arm.disconnect() }
+
+        let total = Double(booth.countdown)
+        let fireAt = max(0, total + booth.preRoll)     // seconds from START to fire the rig
+
+        // Fire the rig on its own clock.
+        let fireTask = Task { @MainActor () -> Bool in
+            try? await Task.sleep(nanoseconds: UInt64(fireAt * 1_000_000_000))
+            if Task.isCancelled { return false }
+            if selfRunning {
+                return await rail.sendRawProgram(program.railProgram!)
+            } else {
+                _ = await runner.prewarm()
+                runner.boothLaunchArm(program)         // no rail code: app-driven arm movement
+                return true
+            }
         }
 
+        // The countdown ticks to GO.
         if booth.countdown > 0 {
             for n in stride(from: booth.countdown, through: 1, by: -1) {
                 phase = .countdown(n)
                 Haptics.light()
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
-                if Task.isCancelled { railTask?.cancel(); return }
+                if Task.isCancelled { fireTask.cancel(); return }
             }
         }
+        _ = await fireTask.value
 
+        // GO — recording starts NOW, the instant the count ends, exactly as the template expects.
+        Haptics.heavy()
         phase = .armed
-        _ = await prewarm.value
-        if let railTask, let err = await railTask.value, !err.hasPrefix("Done") {
-            phase = .failed(err); return
-        }
-
-        // Launch the arm now — on “1”, no waiting.
-        Haptics.medium()
-        runner.boothLaunchArm(program)
-        let fired = Date()
-        while runner.running, !runner.motionStarted, Date().timeIntervalSince(fired) < 15, !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: 20_000_000)
-        }
-        if Task.isCancelled { return }
-
         if onCanon {
             do { try await canon.startMovie() } catch {
                 Log.write("capture: Canon would not record — \(error.localizedDescription)")
@@ -225,7 +230,6 @@ final class CaptureFlow: ObservableObject {
         let recordingStarted = Date()
         phase = .recording
 
-        // Record the template's length from the move, then stop; the rail returns on its own.
         let need = BoothTemplate.recordingSecondsNeeded + max(0, booth.tail)
         while Date().timeIntervalSince(recordingStarted) < need, !Task.isCancelled {
             try? await Task.sleep(nanoseconds: 100_000_000)
@@ -246,13 +250,11 @@ final class CaptureFlow: ObservableObject {
         }
         Log.write("capture: recorded \(raw.lastPathComponent)")
 
-        // 🔑 **Free the booth NOW; render in the background.** Back to Ready immediately so the next
-        // guest goes; the clip builds and saves, and the carriage returns, both in the background.
+        // Free the booth NOW; render in the background. Reconnect the arm link for the next run's
+        // telemetry (it does not drive the arm; it just lets the status lights read).
         phase = .idle
         note = nil
-        // boothLaunchArm's own task finishes the arm, waits for the carriage to return, and clears
-        // `running` — so the next CAPTURE is blocked ("rig still running") only until the rig is
-        // genuinely home, which overlaps the next guest stepping in. Nothing to do here but render.
+        if selfRunning { Task { _ = await arm.connect() } }
         Task.detached {
             do {
                 let clip = try await TimelineExporter.export(recordingURL: raw)
