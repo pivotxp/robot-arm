@@ -2,11 +2,12 @@ import AVKit
 import Photos
 import SwiftUI
 
-/// The booth screen: the camera, one CAPTURE button, and what is happening. Nothing else — no
-/// program list, no numbers, no way to change anything.
+/// The booth screen: the camera, one CAPTURE button, and what is happening. Clean enough for a
+/// demo, plain enough to take branding later.
 ///
-/// Getting out: with Support mode on there is a plain "Support" button; with it off, three taps
-/// on the top-left corner then the PIN. STOP is always there, because the rig moves.
+/// Getting out: three taps on the top-left corner — each tap lights a dot so the crew can see
+/// it counting — then the crew PIN opens the admin screen. With Support mode on there is a
+/// plain "Support" button instead. STOP is always there, because the rig moves.
 struct BoothView: View {
     @ObservedObject private var booth = Booth.shared
     @ObservedObject private var flow = CaptureFlow.shared
@@ -25,14 +26,14 @@ struct BoothView: View {
     var body: some View {
         ZStack {
             camera
-            VStack {
+            VStack(spacing: 0) {
                 top
                 Spacer()
                 centre
                 Spacer()
                 bottom
             }
-            .padding(24)
+            .padding(28)
         }
         .background(Color.black)
         .statusBarHidden(true)
@@ -79,51 +80,63 @@ struct BoothView: View {
         } else if recorder.isRunning {
             CameraPreview(session: recorder.session)
                 .ignoresSafeArea()
-                .overlay(Color.black.opacity(flow.phase.isBusy ? 0 : 0.25))
         } else {
-            ContentUnavailableView(recorder.status, systemImage: "video.slash")
-                .foregroundStyle(.white)
+            VStack(spacing: 12) {
+                Image(systemName: "video.slash").font(.system(size: 44))
+                Text(recorder.status).font(.title3)
+            }
+            .foregroundStyle(.white.opacity(0.7))
         }
     }
 
+    /// Top-left: the tap counter (or the Support button). Top-right: what this booth runs.
     private var top: some View {
         HStack(alignment: .top) {
-            // Unmarked corner: three taps to get the PIN pad. With Support mode on, a real button.
             if booth.supportMode {
                 Button {
                     booth.locked = false
                 } label: {
                     Label("Support", systemImage: "wrench.and.screwdriver")
-                        .font(.headline)
-                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 12).padding(.vertical, 8)
                 }
                 .buttonStyle(.bordered)
                 .tint(.white)
             } else {
-                Color.clear
-                    .frame(width: 120, height: 80)
-                    .contentShape(Rectangle())
-                    .onTapGesture { cornerTap() }
+                // Unmarked until the first tap; then three dots count the taps.
+                HStack(spacing: 8) {
+                    ForEach(0..<3, id: \.self) { i in
+                        Circle()
+                            .fill(i < cornerTaps ? Color.white : Color.white.opacity(0.25))
+                            .frame(width: 12, height: 12)
+                    }
+                }
+                .padding(.horizontal, 14).padding(.vertical, 12)
+                .background(.black.opacity(0.35), in: Capsule())
+                .opacity(cornerTaps > 0 ? 1 : 0)
+                .frame(width: 150, height: 90, alignment: .topLeading)
+                .contentShape(Rectangle())
+                .onTapGesture { cornerTap() }
+                .animation(.easeOut(duration: 0.15), value: cornerTaps)
             }
+
             Spacer()
+
             VStack(alignment: .trailing, spacing: 4) {
                 Text(programName)
                     .font(.headline)
-                if recorder.isRunning {
-                    Text(recorder.status).font(.caption)
-                }
-                // For the crew: the two links at a glance, only while Support mode is on.
                 if booth.supportMode {
                     HStack(spacing: 10) {
                         light(arm.connected, "Arm")
                         light(rail.connected, "Rail")
+                        if recorder.isRunning { Text(recorder.status) }
                     }
                     .font(.caption)
                 }
             }
-            .foregroundStyle(.white.opacity(0.85))
-            .padding(.horizontal, 14).padding(.vertical, 8)
-            .background(.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 10))
+            .foregroundStyle(.white.opacity(0.9))
+            .padding(.horizontal, 14).padding(.vertical, 10)
+            .background(.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 12))
         }
     }
 
@@ -132,13 +145,13 @@ struct BoothView: View {
         switch flow.phase {
         case .countdown(let n):
             Text("\(n)")
-                .font(.system(size: 220, weight: .black))
+                .font(.system(size: 240, weight: .black))
                 .foregroundStyle(.white)
                 .contentTransition(.numericText(countsDown: true))
-                .shadow(radius: 20)
+                .shadow(radius: 24)
         case .armed:
             Text("Get ready…")
-                .font(.system(size: 48, weight: .bold))
+                .font(.system(size: 52, weight: .bold))
                 .foregroundStyle(.white)
                 .shadow(radius: 12)
         case .recording:
@@ -156,8 +169,6 @@ struct BoothView: View {
             }
             .padding(30)
             .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 20))
-        case .done:
-            EmptyView()
         case .failed(let why):
             VStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 44))
@@ -166,11 +177,13 @@ struct BoothView: View {
             .foregroundStyle(.white)
             .padding(30)
             .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 20))
-        case .idle:
+        case .idle, .done:
             EmptyView()
         }
     }
 
+    /// STOP on the left, the one big button in the middle, a matching blank on the right so the
+    /// button stays centred.
     @ViewBuilder
     private var bottom: some View {
         HStack(alignment: .bottom) {
@@ -178,38 +191,38 @@ struct BoothView: View {
                 flow.stop()
             } label: {
                 Text("STOP")
-                    .font(.system(size: 22, weight: .black))
-                    .frame(width: 120, height: 56)
+                    .font(.system(size: 20, weight: .black))
+                    .frame(width: 110, height: 52)
             }
             .buttonStyle(.borderedProminent)
             .tint(.red)
-            .opacity(flow.phase.isBusy || runner.running ? 1 : 0.35)
+            .opacity(flow.phase.isBusy || runner.running ? 1 : 0.4)
 
             Spacer()
 
             switch flow.phase {
             case .idle:
                 VStack(spacing: 10) {
+                    if let b = flow.blocker {
+                        Text(b)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 14).padding(.vertical, 7)
+                            .background(.black.opacity(0.55), in: Capsule())
+                    }
                     Button {
                         Haptics.heavy()
                         flow.capture()
                     } label: {
                         Label("CAPTURE", systemImage: "camera.fill")
-                            .font(.system(size: 34, weight: .black))
-                            .frame(width: 340, height: 92)
+                            .font(.system(size: 36, weight: .black))
+                            .frame(width: 360, height: 96)
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(flow.blocker != nil)
-                    if let b = flow.blocker {
-                        Text(b)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.orange)
-                            .padding(.horizontal, 12).padding(.vertical, 6)
-                            .background(.black.opacity(0.5), in: Capsule())
-                    }
                 }
             case .done, .failed:
-                VStack(spacing: 8) {
+                VStack(spacing: 10) {
                     if case .done = flow.phase {
                         Text("Saved to Photos").font(.headline).foregroundStyle(.white)
                     }
@@ -228,13 +241,13 @@ struct BoothView: View {
             default:
                 Text(runner.status)
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.85))
-                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .foregroundStyle(.white.opacity(0.9))
+                    .padding(.horizontal, 14).padding(.vertical, 7)
                     .background(.black.opacity(0.45), in: Capsule())
             }
 
             Spacer()
-            Color.clear.frame(width: 120, height: 56)
+            Color.clear.frame(width: 110, height: 52)
         }
     }
 
@@ -259,16 +272,21 @@ struct BoothView: View {
         flow.reset()
     }
 
+    /// Three taps within three seconds of each other. The dots show the count.
     private func cornerTap() {
+        Haptics.light()
         cornerTaps += 1
         cornerReset?.cancel()
         if cornerTaps >= 3 {
-            cornerTaps = 0
             showPIN = true
+            cornerReset = Task {
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                cornerTaps = 0
+            }
             return
         }
         cornerReset = Task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
             if !Task.isCancelled { cornerTaps = 0 }
         }
     }

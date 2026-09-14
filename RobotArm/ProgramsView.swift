@@ -55,7 +55,7 @@ struct ProgramsView: View {
                     newPIN = ""
                     showPINChange = true
                 } label: {
-                    Label(booth.pinIsDefault ? "Set the crew PIN (still the default)" : "Change the crew PIN", systemImage: "lock")
+                    Label(booth.pinIsDefault ? "Crew PIN is \(Booth.defaultPIN) — change it" : "Change the crew PIN", systemImage: "lock")
                 }
                 LabeledContent("Video template") {
                     Text(BoothTemplate.summary)

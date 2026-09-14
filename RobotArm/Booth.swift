@@ -29,10 +29,14 @@ final class Booth: ObservableObject {
     /// Record this long after the rig reports done, so the last frames are never cut.
     @Published var tail: Double { didSet { d.set(tail, forKey: "booth.tail") } }
 
-    /// Four or more digits. Stored on the iPad, never in the code.
+    /// The crew PIN Kyle asked for. Changeable on the iPad under Booth; this is the value until
+    /// one is set there.
+    static let defaultPIN = "0485"
+
+    /// Four or more digits.
     var pin: String {
         let p = d.string(forKey: "booth.pin") ?? ""
-        return p.count >= 4 ? p : "0000"
+        return p.count >= 4 ? p : Self.defaultPIN
     }
     var pinIsDefault: Bool { (d.string(forKey: "booth.pin") ?? "").count < 4 }
 

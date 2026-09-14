@@ -40,10 +40,10 @@ the wires), builds the clip with the video template and saves it to Photos, then
 resets for the next guest. If something is not ready the button is greyed and says why.
 
 Setting it up is on the Programs screen under **Booth**: which program Capture runs, the
-countdown, **Support mode**, and the crew PIN (the app ships with `0000` — change it).
+countdown, **Support mode**, and the crew PIN (`0485` until changed there).
 
 - **Support mode off** (guests): the app opens on the booth screen; leaving it is three taps on
-  the top-left corner, then the PIN.
+  the top-left corner — three dots light up as you tap — then the PIN opens the admin screen.
 - **Support mode on** (crew): the app opens on Programs and the booth screen has a **Support**
   button, so nobody types the PIN while setting up. Turn it off before the event.
 
