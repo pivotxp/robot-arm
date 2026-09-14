@@ -136,6 +136,11 @@ struct BoothView: View {
                 .foregroundStyle(.white)
                 .contentTransition(.numericText(countsDown: true))
                 .shadow(radius: 20)
+        case .armed:
+            Text("Get ready…")
+                .font(.system(size: 48, weight: .bold))
+                .foregroundStyle(.white)
+                .shadow(radius: 12)
         case .recording:
             Label("Recording", systemImage: "record.circle.fill")
                 .font(.system(size: 40, weight: .bold))

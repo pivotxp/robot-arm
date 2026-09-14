@@ -11,6 +11,10 @@ final class Runner: ObservableObject {
     private let rail = RailLink.shared
 
     @Published private(set) var running = false
+    /// True from the moment the arm's steps are handed over (after the rail's cue and any delay)
+    /// until the run ends. The booth starts its recording on this, so the clip's first seconds
+    /// are the move and not the wait for the wires.
+    @Published private(set) var motionStarted = false
     @Published private(set) var status = "Ready" {
         didSet { if status != oldValue { Log.write("status: \(status)") } }
     }
@@ -95,6 +99,7 @@ final class Runner: ObservableObject {
         task = nil
         preparedGeneration = -1          // after a stop the arm needs enabling again
         status = "STOPPED"
+        motionStarted = false
         guard !stopping else { return }
         stopping = true
         running = true
@@ -114,6 +119,7 @@ final class Runner: ObservableObject {
         guard !steps.isEmpty else { status = "\(name) has no steps"; return }
 
         running = true
+        motionStarted = false
         Log.write("run: “\(name)” rail \(railProgram.map(String.init) ?? "none") start \(armStart.rawValue) delay \(armDelay) steps \(steps.count)")
         task = Task { @MainActor in
             let result = await execute(name: name, railProgram: railProgram, armStart: armStart,
@@ -121,6 +127,7 @@ final class Runner: ObservableObject {
             if !Task.isCancelled {
                 status = result
                 running = false
+                motionStarted = false
             }
         }
     }
@@ -175,6 +182,7 @@ final class Runner: ObservableObject {
         }
 
         // 3. Hand every step to the arm. The arm queues them and plays them back to back.
+        motionStarted = true
         status = "Running \(name)…"
         var pauseTotal: Double = 0
         for (i, step) in steps.enumerated() {

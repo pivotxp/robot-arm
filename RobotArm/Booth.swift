@@ -67,6 +67,8 @@ final class CaptureFlow: ObservableObject {
     enum Phase: Equatable {
         case idle
         case countdown(Int)
+        /// The rig has been fired; the camera starts when the arm goes.
+        case armed
         case recording
         case rendering
         case done(URL)
@@ -137,16 +139,30 @@ final class CaptureFlow: ObservableObject {
             }
         }
 
-        // Camera first, then the rig — so the first frames of the move are on film.
         let filming = recorder.isRunning
-        if filming { recorder.startRecording() } else { note = "No camera — the rig ran but nothing was recorded." }
-        phase = .recording
-        try? await Task.sleep(nanoseconds: 300_000_000)
+        if !filming { note = "No camera — the rig ran but nothing was recorded." }
 
+        // Fire the rig, then start the camera the moment the arm goes — after the rail's cue.
+        // The video template slices the first seconds of the recording, so those seconds have
+        // to be the move, not the wait for the wires (which can be several seconds).
+        phase = .armed
         runner.run(program)
-        // The runner reports through `running`; wait for it, but never forever.
-        let started = Date()
-        while runner.running, Date().timeIntervalSince(started) < 90, !Task.isCancelled {
+        let fired = Date()
+        while runner.running, !runner.motionStarted, Date().timeIntervalSince(fired) < 30, !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        if Task.isCancelled { return }
+        guard runner.running else {
+            // Refused before it started — the reason is on the status line.
+            phase = .failed(runner.status)
+            return
+        }
+        if filming { recorder.startRecording() }
+        let recordingStarted = Date()
+        phase = .recording
+
+        // Wait for the rig, but never forever.
+        while runner.running, Date().timeIntervalSince(fired) < 120, !Task.isCancelled {
             try? await Task.sleep(nanoseconds: 200_000_000)
         }
         if Task.isCancelled { return }
@@ -156,7 +172,12 @@ final class CaptureFlow: ObservableObject {
             Log.write("capture: rig reported “\(rigResult)”")
         }
 
-        try? await Task.sleep(nanoseconds: UInt64(max(0, booth.tail) * 1_000_000_000))
+        // At least as long as the template needs, plus the tail.
+        let need = BoothTemplate.recordingSecondsNeeded + max(0, booth.tail)
+        let have = Date().timeIntervalSince(recordingStarted)
+        if have < need {
+            try? await Task.sleep(nanoseconds: UInt64((need - have) * 1_000_000_000))
+        }
         guard filming else {
             phase = rigResult.hasPrefix("Done") ? .failed("The rig ran, but there is no camera to record with.") : .failed(rigResult)
             return

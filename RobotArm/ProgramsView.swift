@@ -13,6 +13,7 @@ struct ProgramsView: View {
     @ObservedObject private var booth = Booth.shared
     @State private var showTemplate = false
     @State private var showPINChange = false
+    @State private var confirmTemplate = false
     @State private var newPIN = ""
     @State private var showNew = false
     @State private var newCode = 39
@@ -55,6 +56,16 @@ struct ProgramsView: View {
                     showPINChange = true
                 } label: {
                     Label(booth.pinIsDefault ? "Set the crew PIN (still the default)" : "Change the crew PIN", systemImage: "lock")
+                }
+                LabeledContent("Video template") {
+                    Text(BoothTemplate.summary)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundStyle(.secondary)
+                }
+                Button {
+                    confirmTemplate = true
+                } label: {
+                    Label("Put the video template back to the booth default", systemImage: "arrow.counterclockwise")
                 }
                 Button {
                     booth.locked = true
@@ -178,6 +189,10 @@ struct ProgramsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Which code? Free codes: \(freeCodes.prefix(12).map(String.init).joined(separator: ", "))\(freeCodes.count > 12 ? "…" : "").")
+        }
+        .confirmationDialog("Put the video template back to the booth default? Recording clips become 1 s · 4 s at ½ speed · 2.4 s (volume off). Uploaded clips such as the outro are kept.",
+                            isPresented: $confirmTemplate, titleVisibility: .visible) {
+            Button("Apply the booth template") { BoothTemplate.apply() }
         }
         .alert("Crew PIN", isPresented: $showPINChange) {
             TextField("4 digits or more", text: $newPIN)

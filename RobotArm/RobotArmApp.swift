@@ -26,6 +26,7 @@ struct RobotArmApp: App {
             }
             .task {
                 store.load()
+                BoothTemplate.applyIfFresh()
                 arm.startAutoConnect()
                 rail.startAutoConnect()
                 Log.write("launch — build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?")")
