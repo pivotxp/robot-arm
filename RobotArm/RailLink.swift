@@ -86,6 +86,11 @@ final class RailLink: ObservableObject {
 
     @Published private(set) var connected = false
     @Published private(set) var lastError = ""
+    /// The program that is loaded AND the drive energised, so a bare RunProgram pulse will run it.
+    /// This is the slow part of a start (several writes to the PLC's sluggish web server); holding
+    /// it between shots means each booth capture only has to fire the pulse — near-instant at "GO".
+    /// Cleared whenever the mode could have changed under us: reconnect, fault, home, or stop.
+    private(set) var armedProgram: Int?
     /// Straight from the PLC's status page.
     @Published private(set) var programNum = "0"
     @Published private(set) var currentPosition = "0"
@@ -111,16 +116,38 @@ final class RailLink: ObservableObject {
 
     // MARK: - Auto-connect
 
+    /// The program the booth wants kept ready to pulse. While this is set, the auto-connect loop
+    /// re-arms the rail whenever it is connected, idle and not already armed for it — so the rail is
+    /// loaded and energised BEFORE anyone taps CAPTURE, and the trigger at "GO" is instant. Set by
+    /// the booth screen; cleared when it closes so crew work (home / edit) is not fought.
+    var keepArmedProgram: Int?
+
+    /// While true, the background refresh loop stands down. This PLC's web server wedges when two
+    /// requests overlap — a routine 5 s refresh colliding with the trigger pulse turned a 0.2 s
+    /// pulse into a 4.8 s one. The booth raises this for the length of a capture so the pulse has
+    /// the server entirely to itself and fires instantly.
+    var pauseAuto = false
+
     /// Every 5 s: log in if we are not, otherwise read the status page (which also proves the
-    /// session is still alive).
+    /// session is still alive) and keep the booth program armed.
     func startAutoConnect() {
         guard autoTask == nil else { return }
         autoTask = Task { @MainActor in
             while !Task.isCancelled {
+                if pauseAuto {
+                    // A capture owns the link right now — do not touch the server.
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                    continue
+                }
                 if !connected {
                     _ = await handshake()
                 } else {
                     _ = await refresh()
+                    // Keep the booth program armed and ready, so CAPTURE only has to pulse.
+                    if let want = keepArmedProgram, !pauseAuto, connected, armedProgram != want,
+                       busy.isEmpty, statusError == "0", !Runner.shared.running {
+                        _ = await armProgram(want)
+                    }
                 }
                 try? await Task.sleep(nanoseconds: 5_000_000_000)
             }
@@ -185,17 +212,25 @@ final class RailLink: ObservableObject {
               let (data, _) = try? await session.data(from: url),
               let text = String(data: data, encoding: .utf8) else {
             connected = false
+            armedProgram = nil
             return false
         }
         guard let start = text.firstIndex(of: "{"),
               let obj = try? JSONSerialization.jsonObject(with: Data(text[start...].utf8)) as? [String: String] else {
             connected = false
+            armedProgram = nil
             return false
         }
         programNum      = obj["ProgramNum"] ?? "0"
         currentPosition = obj["CurrentPosition"] ?? "0"
         homed           = obj["StatusHomed"] ?? "0"
         statusError     = obj["StatusError"] ?? "0"
+        // If the loaded program drifted from what we armed, or a fault appeared, we are no longer
+        // "ready to pulse" — force a full re-arm before the next fire so we never pulse the wrong
+        // program (pulsing program 0 = stop).
+        if statusError != "0" || (armedProgram != nil && programNum != String(armedProgram!)) {
+            armedProgram = nil
+        }
         if !connected { Log.write("rail: connected — at \(currentPosition) mm, homed \(homed), error \(statusError)") }
         connected = true
         watchForForeignMotion()
@@ -227,7 +262,11 @@ final class RailLink: ObservableObject {
     /// Manual MUST be 0: a stored program is an "automatic mode" action and the PLC silently
     /// ignores RunProgram while Manual is 1. RunProgram MUST be pulsed back to 0, otherwise the
     /// rail re-runs the program forever.
-    func runProgram(_ number: Int) async -> Bool {
+    /// `onFired` is called the instant the RunProgram=1 pulse is written — i.e. the moment the
+    /// carriage physically starts. The booth uses it to launch the arm in lock-step with the rail
+    /// instead of after the whole (variable-latency) HTTPS conversation returns, which is what left
+    /// the arm trailing the rail by ~2 s.
+    func runProgram(_ number: Int, onFired: (@MainActor () -> Void)? = nil) async -> Bool {
         let n = min(63, max(0, number))
         Log.write("rail: run program \(n) (at \(currentPosition) mm, homed \(homed))")
         expectMotion(seconds: 45)
@@ -247,6 +286,69 @@ final class RailLink: ObservableObject {
         // sat at the last program number, the watcher timed out at 15 s every run, and the rig ran
         // wrong. Never trade this pulse for the raw trigger. Latency is hidden by firing during the
         // countdown (see Booth.run), not by changing the trigger.
+        onFired?()                            // launch the arm as the pulse goes out (see firePulse)
+        let fired = await write(.runProgram, "1")
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        _ = await write(.runProgram, "0")
+        return fired
+    }
+
+    /// Get the rail READY to run `number` without starting it: automatic mode, drive energised,
+    /// program loaded and confirmed. This is everything slow about a start; the booth runs it while
+    /// the guest is stepping in / during the 3-2-1, so `firePulse` at "GO" is the only thing left
+    /// and the carriage moves right away. Skips the writes when already armed for this program.
+    /// One arming at a time. Booth-appear prewarm, the between-shots re-arm, and a capture can all
+    /// reach for this at once; without a guard they ran in PARALLEL and interleaved on the PLC's
+    /// single slow web session, taking ~2× as long. The first caller does the work; the rest await it.
+    private var armingTask: Task<Bool, Never>?
+
+    @discardableResult
+    func armProgram(_ number: Int) async -> Bool {
+        let n = min(63, max(0, number))
+        guard connected else { return false }
+        if armedProgram == n { return true }         // already loaded & energised — nothing to do
+        if let inFlight = armingTask { return await inFlight.value }
+        let task = Task { @MainActor in await self.doArm(n) }
+        armingTask = task
+        let ok = await task.value
+        armingTask = nil
+        return ok
+    }
+
+    private func doArm(_ n: Int) async -> Bool {
+        _ = await write(.manual, "0")
+        _ = await write(.enable, "1")
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        guard await write(.programNumber, String(n)) else { armedProgram = nil; return false }
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        await refresh()
+        guard programNum == String(n) else {
+            lastError = "Rail did not accept program \(n) (it reads \(programNum))"
+            armedProgram = nil
+            return false
+        }
+        armedProgram = n
+        Log.write("rail: armed program \(n) — ready to pulse")
+        return true
+    }
+
+    /// Fire ONLY the RunProgram 1→0 pulse for a program already loaded by `armProgram`. One fast
+    /// write, so the carriage starts almost immediately. `onFired` fires the instant the pulse is
+    /// written — the moment motion begins — for launching the arm in lock-step. Falls back to the
+    /// full `runProgram` if the rail is not armed (or armed for a different program).
+    @discardableResult
+    func firePulse(_ number: Int, onFired: (@MainActor () -> Void)? = nil) async -> Bool {
+        let n = min(63, max(0, number))
+        guard connected else { return false }
+        guard armedProgram == n else {
+            return await runProgram(n, onFired: onFired)   // not pre-armed — do it the whole way
+        }
+        expectMotion(seconds: 45)
+        Log.write("rail: PULSE program \(n) (armed) — at \(currentPosition) mm")
+        // Launch the arm as the pulse GOES OUT, not when this slow server finishes replying. The
+        // PLC starts the carriage the instant the packet lands; waiting for the HTTP response (up to
+        // ~5 s on a bad write) left the rail moving seconds before the arm. Fire them on one beat.
+        onFired?()
         let fired = await write(.runProgram, "1")
         try? await Task.sleep(nanoseconds: 200_000_000)
         _ = await write(.runProgram, "0")
@@ -286,6 +388,7 @@ final class RailLink: ObservableObject {
     func home() async -> Bool {
         guard connected, busy.isEmpty else { return false }
         busy = "Homing"
+        armedProgram = nil          // homing switches to manual mode — the pulse-ready state is gone
         defer { busy = "" }
         Log.write("rail: homing")
         expectMotion(seconds: 70)
@@ -340,6 +443,7 @@ final class RailLink: ObservableObject {
 
     /// Stop the rail, every way we have, in the order that matters.
     func stop() async {
+        armedProgram = nil          // enable is about to drop — no longer ready to pulse
         _ = await write(.enable, "0")
         await rawStop()
         for tag in [Tag.runProgram, .execute, .executeHoming] { _ = await write(tag, "0") }

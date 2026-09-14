@@ -139,8 +139,9 @@ final class Runner: ObservableObject {
         guard !program.steps.isEmpty else { status = "\(program.name) has no steps"; return }
         running = true
         motionStarted = false
+        let scale = Booth.shared.armSpeedScale      // booth slows the arm to match the rail
         task = Task { @MainActor in
-            let why = await runArmSteps(name: program.name, steps: program.steps)
+            let why = await runArmSteps(name: program.name, steps: program.steps, speedScale: scale)
             if program.railProgram != nil, rail.connected {
                 status = "Arm done — rail finishing…"
                 await rail.waitUntilStill()
@@ -243,9 +244,13 @@ final class Runner: ObservableObject {
     /// The arm half of a run: hand every step over, then wait until the arm is at rest. Shared by
     /// the Programs-screen run and the booth, so both drive the arm identically. Returns nil on
     /// success or a reason string. Sets `motionStarted` the instant the first command is sent.
-    private func runArmSteps(name: String, steps: [Step]) async -> String? {
+    /// `speedScale` slows (or speeds) every move without touching the authored program — the booth
+    /// uses it to stretch the arm's sweep so it lasts as long as the rail's travel and the two move
+    /// as one. 1.0 = the program as authored; 0.45 ≈ takes ~2× as long.
+    private func runArmSteps(name: String, steps: [Step], speedScale: Double = 1.0) async -> String? {
         motionStarted = true
         status = "Running \(name)…"
+        let scale = max(0.1, speedScale)
         var pauseTotal: Double = 0
         for (i, step) in steps.enumerated() {
             let ok: Bool
@@ -258,13 +263,13 @@ final class Runner: ObservableObject {
                 // keeps 0 so it settles cleanly.
                 let isLast = (i == steps.count - 1)
                 let blend = (step.pauseAfter > 0 || isLast) ? 0 : max(step.radius, Self.defaultBlend)
-                ok = await arm.moveJoints(step.joints, speed: min(step.speed, Limits.maxJointSpeed),
+                ok = await arm.moveJoints(step.joints, speed: min(step.speed * scale, Limits.maxJointSpeed),
                                           acc: max(step.acc, 1), radius: blend)
             case .line:
-                ok = await arm.moveLine(step.pose, speed: min(step.speed, Limits.maxLineSpeed),
+                ok = await arm.moveLine(step.pose, speed: min(step.speed * scale, Limits.maxLineSpeed),
                                         acc: max(step.acc, 1), radius: step.radius)
             case .home:
-                ok = await arm.home(speed: min(step.speed, Limits.maxJointSpeed), acc: max(step.acc, 1))
+                ok = await arm.home(speed: min(step.speed * scale, Limits.maxJointSpeed), acc: max(step.acc, 1))
             case .pause:
                 ok = true
             }

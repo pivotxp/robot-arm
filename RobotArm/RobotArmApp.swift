@@ -22,13 +22,28 @@ struct RobotArmApp: App {
                             ProgramsView()
                         }
                     }
+                    // Crew screen wants the arm live for authoring — but NOT while the booth program
+                    // is self-running, or the 30–60 s dead-slot hold would block the next booth
+                    // capture's onboard arm program. Only connect for app-driven programs.
+                    .task { if !Booth.shared.programIsSelfRunning { ArmLink.shared.startAutoConnect() } }
                 }
             }
             .task {
                 store.load()
                 BoothTemplate.applyIfFresh()
-                arm.startAutoConnect()
+                // Keep the booth program's rail move armed from launch, so the rail is loaded and
+                // energised well before the first CAPTURE — the trigger at "GO" is then instant.
+                rail.keepArmedProgram = booth.program.flatMap { store.program($0)?.railProgram }
                 rail.startAutoConnect()
+                // Stay OFF the arm whenever the booth program is self-running — even on the crew
+                // screen. The robot runs its own onboard move off the rail's six wires, and the xArm
+                // holds a dead control session for 30–60 s after any disconnect: if the app so much
+                // as touched the arm on the crew screen, the FIRST booth capture would hit a still-
+                // blocked slot and the arm wouldn't move (seen 2026-09-14). Connect only when a
+                // non-self-running program needs the app to drive it.
+                if !booth.programIsSelfRunning {
+                    arm.startAutoConnect()
+                }
                 Canon.shared.start()
                 Log.write("launch — build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?")")
                 Log.write("camera devices: \(Recorder.videoDeviceList())")

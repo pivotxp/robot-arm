@@ -57,6 +57,21 @@ struct ProgramsView: View {
                     Text("Head start for the rig so it is already moving by “GO”. Make it more negative until the arm and rail are moving right as the countdown hits 1.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+                VStack(alignment: .leading) {
+                    Text(booth.armSync == 0 ? "Arm and rail start together"
+                         : "Arm starts \(Fmt.num(booth.armSync)) s after the rail")
+                        .font(.subheadline)
+                    Slider(value: $booth.armSync, in: 0...1.5, step: 0.05)
+                    Text("Fine sync. The arm is launched exactly when the rail carriage starts. If the arm still gets ahead of the slider, nudge this up until they move as one.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                VStack(alignment: .leading) {
+                    Text("Arm speed: \(Int(booth.armSpeedScale * 100))% of the program")
+                        .font(.subheadline)
+                    Slider(value: $booth.armSpeedScale, in: 0.2...1.0, step: 0.05)
+                    Text("Slows the arm so its sweep lasts as long as the rail's travel — lower until the arm and rail finish together. Only affects the booth; your saved program is unchanged.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Picker("Camera", selection: $booth.camera) {
                     Text("Canon").tag("canon")
                     Text("iPad back").tag("back")

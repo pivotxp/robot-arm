@@ -56,8 +56,21 @@ struct BoothView: View {
                 Log.write("photos: permission \(st == .authorized || st == .limited ? "allowed" : "DENIED (\(st.rawValue))")")
             }
             if !booth.usesCanon { await recorder.start() }
+            // Keep the rail armed for the booth program the whole time the booth is open, so CAPTURE
+            // only ever fires the instant trigger pulse (the ~7 s of setup happens in the background,
+            // never while you are waiting on a shot). The auto-connect loop maintains it.
+            rail.keepArmedProgram = booth.program.flatMap { store.program($0)?.railProgram }
+            applyArmOwnership()
         }
-        .onDisappear { recorder.stop() }
+        .onChange(of: booth.program) { _, n in
+            rail.keepArmedProgram = n.flatMap { store.program($0)?.railProgram }
+            applyArmOwnership()
+        }
+        .onDisappear {
+            recorder.stop()
+            rail.keepArmedProgram = nil          // let the crew home / edit without the rail re-arming
+            arm.startAutoConnect()               // crew screen wants the arm back
+        }
         .onChange(of: flow.phase) { _, p in
             if case .done(let url) = p {
                 let pl = AVPlayer(url: url)
@@ -118,18 +131,20 @@ struct BoothView: View {
         }
     }
 
-    /// Left: the tap counter (or the Support button). Middle: the wordmark. Right: crew lights.
+    /// Left: the tap counter (or the Support button + camera switch). Middle: the wordmark (guests
+    /// only). Right: crew lights. In support mode the wordmark is dropped and the controls are kept
+    /// compact so the bar stays a slim strip at the very top and never sits over the camera frame.
     private var top: some View {
         ZStack {
-            HStack(alignment: .top) {
+            HStack(alignment: .top, spacing: 10) {
                 if booth.supportMode {
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         Button {
                             booth.locked = false
                         } label: {
                             Label("Support", systemImage: "wrench.and.screwdriver")
-                                .font(.subheadline.weight(.semibold))
-                                .padding(.horizontal, 14).padding(.vertical, 9)
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 11).padding(.vertical, 7)
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(.white)
@@ -144,8 +159,8 @@ struct BoothView: View {
                             Text("Front").tag("front")
                         }
                         .pickerStyle(.segmented)
-                        .frame(width: 230)
-                        .padding(6)
+                        .frame(width: 190)
+                        .padding(4)
                         .background(.ultraThinMaterial, in: Capsule())
                         .onChange(of: booth.camera) { _, _ in Task { await Recorder.shared.restart() } }
                     }
@@ -169,27 +184,30 @@ struct BoothView: View {
                 Spacer()
 
                 if booth.supportMode {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 9) {
                         light(arm.connected, "Arm")
                         light(rail.connected, "Rail")
                         light(canon.isReady, "Canon")
                         Text(programName)
-                        if recorder.isRunning { Text(recorder.status) }
                     }
-                    .font(.caption.weight(.medium))
+                    .font(.caption2.weight(.medium))
                     .foregroundStyle(.white.opacity(0.9))
-                    .padding(.horizontal, 14).padding(.vertical, 9)
+                    .padding(.horizontal, 11).padding(.vertical, 7)
                     .background(.ultraThinMaterial, in: Capsule())
                 }
             }
+            .frame(maxHeight: 44, alignment: .top)
 
-            // Branding goes here. A plain wordmark until it does.
-            Text("PIVOT")
-                .font(Brand.condensedBlack(size: 30))
-                .tracking(6)
-                .foregroundStyle(.white.opacity(0.92))
-                .shadow(color: .black.opacity(0.4), radius: 6, y: 2)
-                .allowsHitTesting(false)
+            // Branding for guests. Hidden in support mode: the top bar is full of crew controls
+            // there, and a centred wordmark would land on top of the camera switch / status.
+            if !booth.supportMode {
+                Text("PIVOT")
+                    .font(Brand.condensedBlack(size: 30))
+                    .tracking(6)
+                    .foregroundStyle(.white.opacity(0.92))
+                    .shadow(color: .black.opacity(0.4), radius: 6, y: 2)
+                    .allowsHitTesting(false)
+            }
         }
     }
 
@@ -358,6 +376,14 @@ struct BoothView: View {
         player?.pause()
         player = nil
         flow.reset()
+    }
+
+    /// A self-running program's arm is driven by the robot's own onboard program (off the rail
+    /// wires), so the app must let go of the arm's single control slot or the onboard program is
+    /// blocked. App-driven programs keep the arm connected so the app can send the steps.
+    private func applyArmOwnership() {
+        if booth.programIsSelfRunning { arm.stopAutoConnect() }
+        else { arm.startAutoConnect() }
     }
 
     /// Three taps within three seconds of each other. The dots show the count.

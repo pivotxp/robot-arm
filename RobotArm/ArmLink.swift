@@ -76,6 +76,16 @@ final class ArmLink: ObservableObject {
         }
     }
 
+    /// Stop reaching for the arm AND let go of the control slot. The booth uses this for a
+    /// self-running program: the arm runs its OWN onboard program off the rail's six-wire cue, and
+    /// the xArm allows only one control client — if this app holds the slot, the onboard program is
+    /// blocked and the arm never moves. Staying off the arm is what lets the back end run it.
+    func stopAutoConnect() {
+        autoTask?.cancel()
+        autoTask = nil
+        disconnect()
+    }
+
     /// Read state, error and joints. Cheap; used by the poll and the run loop.
     func refreshStatus() async {
         guard connected else { return }
