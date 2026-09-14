@@ -20,6 +20,8 @@ struct RobotArmApp: App {
                 store.load()
                 arm.startAutoConnect()
                 rail.startAutoConnect()
+                Log.write("launch — build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?")")
+                await runLaunchRequest()
             }
         }
     }
@@ -84,5 +86,42 @@ struct StatusStrip: View {
             }
         }
         .frame(minWidth: 140, alignment: .leading)
+    }
+}
+
+
+// MARK: - Doing one thing from the Mac
+//
+// The iPad sits on the rig; the Mac is where the log is read. These launch arguments let a test
+// be started over the cable without touching the screen:
+//
+//   xcrun devicectl device process launch --device <id> com.pivotxp.armcontrol -- -measure 14
+//   xcrun devicectl device process launch --device <id> com.pivotxp.armcontrol -- -run 14
+//
+// `-measure N` fires rail program N with the arm standing still and writes to robotarm.log whether
+// the control box raised N on the six wires, and how long after the trigger. `-run N` runs program
+// N exactly as the Run button would. Both wait up to 30 s for the links to come up first.
+extension RobotArmApp {
+    private func runLaunchRequest() async {
+        let d = UserDefaults.standard
+        let measure = d.object(forKey: "measure") != nil ? d.integer(forKey: "measure") : nil
+        let run = d.object(forKey: "run") != nil ? d.integer(forKey: "run") : nil
+        guard measure != nil || run != nil else { return }
+
+        Log.write("launch request: \(measure.map { "measure \($0)" } ?? "") \(run.map { "run \($0)" } ?? "")")
+        for _ in 0..<60 where !(arm.connected && rail.connected) {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+        guard arm.connected, rail.connected else {
+            Log.write("launch request: gave up — arm \(arm.connected ? "up" : "DOWN"), rail \(rail.connected ? "up" : "DOWN")")
+            return
+        }
+        if let n = measure {
+            runner.measureSignal(railProgram: n)
+        } else if let n = run, let p = store.program(n) {
+            runner.run(p)
+        } else if let n = run {
+            Log.write("launch request: no program at code \(n)")
+        }
     }
 }

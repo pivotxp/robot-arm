@@ -95,6 +95,7 @@ final class RailLink: ObservableObject {
         guard let (_, resp) = try? await session.data(for: req),
               let code = (resp as? HTTPURLResponse)?.statusCode, (200...399).contains(code) else {
             lastError = "Rail login was rejected"
+            Log.write("rail: login rejected")
             return false
         }
         if await refresh() { return true }
@@ -136,6 +137,7 @@ final class RailLink: ObservableObject {
         currentPosition = obj["CurrentPosition"] ?? "0"
         homed           = obj["StatusHomed"] ?? "0"
         statusError     = obj["StatusError"] ?? "0"
+        if !connected { Log.write("rail: connected — at \(currentPosition) mm, homed \(homed), error \(statusError)") }
         connected = true
         return true
     }
@@ -167,6 +169,7 @@ final class RailLink: ObservableObject {
     /// rail re-runs the program forever.
     func runProgram(_ number: Int) async -> Bool {
         let n = min(63, max(0, number))
+        Log.write("rail: run program \(n) (at \(currentPosition) mm, homed \(homed))")
         _ = await write(.manual, "0")
         _ = await write(.enable, "1")
         try? await Task.sleep(nanoseconds: 150_000_000)

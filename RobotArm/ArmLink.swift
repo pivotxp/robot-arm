@@ -109,7 +109,7 @@ final class ArmLink: ObservableObject {
             DispatchQueue.global().asyncAfter(deadline: .now() + 5) { finish(false) }
         }
         connected = ok
-        if ok { connectionGeneration += 1; await refreshStatus() } else { disconnect() }
+        if ok { connectionGeneration += 1; await refreshStatus(); Log.write("arm: connected — state \(armState), error \(errorCode)") } else { disconnect() }
         return ok
     }
 

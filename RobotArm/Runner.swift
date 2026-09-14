@@ -11,7 +11,9 @@ final class Runner: ObservableObject {
     private let rail = RailLink.shared
 
     @Published private(set) var running = false
-    @Published private(set) var status = "Ready"
+    @Published private(set) var status = "Ready" {
+        didSet { if status != oldValue { Log.write("status: \(status)") } }
+    }
 
     /// The last time the rail's six-wire cue was seen: which program, and how long after the
     /// trigger was sent (timed from the start of the rail conversation, since the cue can arrive
@@ -55,6 +57,7 @@ final class Runner: ObservableObject {
         guard arm.connected else { status = "Arm is not connected — its inputs are where the wires arrive"; return }
         running = true
         task = Task { @MainActor in
+            Log.write("measure: firing rail program \(n), arm still, watching CI1–CI6")
             status = "Measuring the wires for rail program \(n)…"
             let watcher = Task { await self.waitForSignal(n) }
             guard await rail.runProgram(n) else {
@@ -77,6 +80,7 @@ final class Runner: ObservableObject {
 
     /// STOP everything. Always allowed.
     func stop() {
+        Log.write("STOP pressed")
         task?.cancel()
         task = nil
         running = false
@@ -96,6 +100,7 @@ final class Runner: ObservableObject {
         guard !steps.isEmpty else { status = "\(name) has no steps"; return }
 
         running = true
+        Log.write("run: “\(name)” rail \(railProgram.map(String.init) ?? "none") start \(armStart.rawValue) delay \(armDelay) steps \(steps.count)")
         task = Task { @MainActor in
             let result = await execute(name: name, railProgram: railProgram, armStart: armStart,
                                        armDelay: armDelay, steps: steps)
@@ -230,7 +235,10 @@ final class Runner: ObservableObject {
             if Task.isCancelled { return false }
             guard let b = await arm.railSignal() else {
                 unreadable += 1
-                if unreadable >= 20 { return false }      // a second of nothing: the link is the problem
+                if unreadable >= 20 {                     // a second of nothing: the link is the problem
+                    Log.write("wires: input pins unreadable — arm link problem, not the PLC")
+                    return false
+                }
                 try? await Task.sleep(nanoseconds: 50_000_000)
                 continue
             }
@@ -238,11 +246,14 @@ final class Runner: ObservableObject {
             if initial == nil { initial = b }
             if b != n { seenOther = true }
             if b == n, initial != n || seenOther {
-                lastSignal = (n, Date().timeIntervalSince(t0), Date())
+                let latency = Date().timeIntervalSince(t0)
+                lastSignal = (n, latency, Date())
+                Log.write(String(format: "wires: program %d seen %.2f s after the trigger began (first read %d)", n, latency, initial ?? -1))
                 return true
             }
             try? await Task.sleep(nanoseconds: 50_000_000)
         }
+        Log.write("wires: NO signal for program \(n) in \(Int(Self.signalTimeout)) s — pins read \(initial.map(String.init) ?? "nothing") throughout")
         return false
     }
 
