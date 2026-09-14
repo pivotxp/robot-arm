@@ -207,15 +207,34 @@ final class CaptureFlow: ObservableObject {
                 if Task.isCancelled { railTask.cancel(); return }
             }
         }
-        let railError = await railTask.value
-        if let railError, !railError.hasPrefix("Done") {
-            // The rail would not go — do not leave the guest staring at a countdown that led nowhere.
+        // "1" has landed. Show the live view AT ONCE — the previous build sat on a frozen "1" here
+        // while it awaited the rail's HTTPS trigger. .armed draws "Get ready…" over the live camera.
+        phase = .armed
+
+        // Confirm the rail took the program (this await now happens under the live view, not a
+        // frozen number).
+        if let railError = await railTask.value, !railError.hasPrefix("Done") {
             phase = .failed(railError)
             return
         }
 
-        // "1" has landed — launch the arm now and start the camera the instant it moves.
-        phase = .armed
+        // 🔑 **SYNC — the arm launches off the rail's REAL motion, never a clock.** The rail was
+        // fired as the countdown began; wait for the carriage to physically move, then launch the
+        // arm at that instant. The arm therefore starts at the same rail position every run, so arm
+        // and rail stay coordinated — which is what the template depends on. (The six-wire edge is
+        // not used here; it is missed most runs when the same program repeats.)
+        if program.railProgram != nil {
+            _ = await runner.boothWaitRailMoving()
+            if Task.isCancelled { return }
+            // The choreography offset: how far into the rail's travel the arm joins. This is the
+            // program's armDelay, now measured from the rail's real motion — the one number that
+            // sets how arm and rail sit together, tunable in the program editor while watching.
+            if program.armDelay > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(program.armDelay * 1_000_000_000))
+                if Task.isCancelled { return }
+            }
+        }
+
         Haptics.medium()
         runner.boothLaunchArm(program)
         let fired = Date()

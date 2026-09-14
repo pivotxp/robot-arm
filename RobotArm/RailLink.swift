@@ -46,6 +46,26 @@ final class RailLink: ObservableObject {
 
     /// Wait until the carriage has been still for a moment (or `timeout` passes). Used after a
     /// program so "Done" means the whole rig, not just the arm.
+    /// Wait until the carriage actually starts moving, and report how far it got. This is the
+    /// booth's sync anchor: the arm launches off the rail's REAL motion, not off a countdown clock
+    /// or the six-wire edge (which is missed most runs when the same program repeats). Anchoring to
+    /// motion means the arm starts at the same rail position every run, which is what the video
+    /// template depends on.
+    func waitUntilMoving(timeout: Double = 12, threshold: Double = 3) async -> Bool {
+        let t0 = Date()
+        let start = Double(currentPosition) ?? 0
+        while Date().timeIntervalSince(t0) < timeout {
+            await refresh()
+            if abs((Double(currentPosition) ?? 0) - start) > threshold {
+                Log.write(String(format: "rail: moving — %.0f → %.0f mm, %.2f s after fired", start, Double(currentPosition) ?? 0, Date().timeIntervalSince(t0)))
+                return true
+            }
+            try? await Task.sleep(nanoseconds: 80_000_000)
+        }
+        Log.write("rail: never started moving within \(Int(timeout)) s")
+        return false
+    }
+
     func waitUntilStill(timeout: Double = 40) async {
         let t0 = Date()
         var last = Double(currentPosition) ?? 0

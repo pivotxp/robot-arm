@@ -72,6 +72,10 @@ final class Runner: ObservableObject {
         return nil
     }
 
+    /// True once the rail has physically started moving after boothFireRail. The booth waits on
+    /// this and launches the arm the instant it returns, so the two are coordinated every run.
+    func boothWaitRailMoving() async -> Bool { await rail.waitUntilMoving() }
+
     /// Launch the arm now — no wire wait, no armDelay. This is the task the booth watches via
     /// `running` / `motionStarted`, and it owns the rail's return afterwards.
     func boothLaunchArm(_ program: Program) {
