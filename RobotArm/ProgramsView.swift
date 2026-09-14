@@ -33,6 +33,30 @@ struct ProgramsView: View {
             }
 
             Section {
+                LabeledContent("Carriage", value: rail.connected ? "\(rail.currentPosition) mm" : "not connected")
+                LabeledContent("Referenced", value: rail.connected ? (rail.homed == "1" ? "yes" : "no — home it") : "—")
+                if rail.connected, rail.statusError != "0" {
+                    LabeledContent("Fault", value: "E\(rail.statusError)")
+                    Button {
+                        Task { await rail.clearFault() }
+                    } label: {
+                        Label(rail.busy == "Clearing fault" ? "Clearing…" : "Clear the fault", systemImage: "exclamationmark.triangle")
+                    }
+                    .disabled(!rail.busy.isEmpty || runner.running)
+                }
+                Button {
+                    Task { await rail.home() }
+                } label: {
+                    Label(rail.busy == "Homing" ? "Homing… (up to a minute)" : "Home the rail", systemImage: "house")
+                }
+                .disabled(!rail.connected || !rail.busy.isEmpty || runner.running)
+            } header: {
+                Text("Rail")
+            } footer: {
+                Text("Homing is lost every time the rail's control box is powered off, and it refuses to run a program until the rail is referenced again. The rail moves to its reference switch.")
+            }
+
+            Section {
                 Button {
                     showMeasure = true
                 } label: {

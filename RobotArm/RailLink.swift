@@ -23,7 +23,11 @@ final class RailLink: ObservableObject {
         case enable        = "\"IOMotor\".Enable"
         case manual        = "\"IOMotor\".Manual"
         case executeHoming = "\"IOMotor\".ExecuteHoming"
+        case resetError    = "\"IOMotor\".ResetError"
     }
+
+    /// True while a homing or fault-reset run is in progress, so buttons can say so.
+    @Published private(set) var busy = ""
 
     @Published private(set) var connected = false
     @Published private(set) var lastError = ""
@@ -184,6 +188,69 @@ final class RailLink: ObservableObject {
         try? await Task.sleep(nanoseconds: 200_000_000)
         _ = await write(.runProgram, "0")
         return fired
+    }
+
+    /// Reference the rail: run the control box's own homing so it knows where the carriage is.
+    ///
+    /// Homing is lost on every power cycle, and the control box refuses to run a program until
+    /// the rail is referenced — the status strip's "not homed" is exactly that state. The
+    /// sequence is the one proven on this rail (the previous app's `referenceRail`): clear every
+    /// trigger, de-energise, energise in MANUAL (homing is a manual-mode action and the PLC
+    /// ignores it otherwise), pulse ExecuteHoming, then watch StatusHomed. Every trigger on this
+    /// machine is pulsed; a level left high is what caused a runaway.
+    ///
+    /// The rail MOVES — to its reference switch and back.
+    @discardableResult
+    func home() async -> Bool {
+        guard connected, busy.isEmpty else { return false }
+        busy = "Homing"
+        defer { busy = "" }
+        Log.write("rail: homing")
+        for tag in [Tag.runProgram, .execute, .executeHoming] { _ = await write(tag, "0") }
+        _ = await write(.enable, "0")
+        _ = await write(.manual, "0")
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+
+        _ = await write(.manual, "1")
+        _ = await write(.enable, "1")
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        _ = await write(.executeHoming, "1")
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        _ = await write(.executeHoming, "0")
+
+        let deadline = Date().addingTimeInterval(60)
+        var ok = false
+        while Date() < deadline {
+            await refresh()
+            if homed == "1" { ok = true; break }
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+        }
+        // Back to automatic mode so a stored program can run; homing stays referenced.
+        _ = await write(.manual, "0")
+        Log.write("rail: homing finished — homed \(homed), at \(currentPosition) mm")
+        if !ok { lastError = "The rail did not report homed within 60 s" }
+        return ok
+    }
+
+    /// Clear a latched fault on the control box.
+    ///
+    /// ResetError fires on a 0→1 edge, so it is pulsed low then high then low. A bare 1 written
+    /// while it is already 1 makes no edge and the fault stays — seen after an E-stop.
+    @discardableResult
+    func clearFault() async -> Bool {
+        guard connected, busy.isEmpty else { return false }
+        busy = "Clearing fault"
+        defer { busy = "" }
+        Log.write("rail: clearing fault (was \(statusError))")
+        _ = await write(.resetError, "0")
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        let ok = await write(.resetError, "1")
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        _ = await write(.resetError, "0")
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        await refresh()
+        Log.write("rail: fault now \(statusError)")
+        return ok
     }
 
     /// Stop the rail, every way we have, in the order that matters.

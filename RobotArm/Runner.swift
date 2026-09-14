@@ -55,6 +55,7 @@ final class Runner: ObservableObject {
         guard !running else { status = "Already running — press STOP first"; return }
         guard rail.connected else { status = "Rail is not connected"; return }
         guard arm.connected else { status = "Arm is not connected — its inputs are where the wires arrive"; return }
+        guard rail.homed == "1" else { status = "Rail is not referenced — tap Home the rail first"; return }
         running = true
         task = Task { @MainActor in
             Log.write("measure: firing rail program \(n), arm still, watching CI1–CI6")
@@ -129,6 +130,11 @@ final class Runner: ObservableObject {
         // for a whole event without anyone knowing why.
         var fallbackNote = ""
         if let n = railProgram {
+            // The control box accepts the trigger and does nothing when the rail is not
+            // referenced. Say so here instead of letting a take run against a still carriage.
+            guard rail.homed == "1" else {
+                return "Rail is not referenced — tap Home the rail on the Programs screen first"
+            }
             let watcher: Task<Bool, Never>? = armStart == .signal
                 ? Task { await self.waitForSignal(n) }
                 : nil

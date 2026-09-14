@@ -41,7 +41,11 @@ The top strip is always there:
 - The text next to STOP says what is happening ("Running Program 14…", "Done", or why it didn't run).
 - **STOP** stops the arm and the rail. Always works. After STOP, just press Run again.
 
-**Programs screen**: press **Run** on a program. Tap the row to edit it.
+**Programs screen**: press **Run** on a program. Tap the row to edit it. At the bottom, the
+**Rail** section shows where the carriage is and whether the rail is referenced — after the rail's
+control box has been powered off it is not, and it will not run a program until **Home the rail**
+has been tapped (the rail moves to its reference switch, up to a minute). A fault shows there too,
+with **Clear the fault**.
 
 **Program screen**:
 - *Rail program to start*: which of the rail's stored moves to fire. Blank = don't touch the rail.
