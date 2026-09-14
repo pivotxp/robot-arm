@@ -146,10 +146,19 @@ final class CanonCCAPI: ObservableObject {
                 guard let url = URL(string: baseStr) else { continue }
                 var req = URLRequest(url: url.appendingPathComponent("ccapi/"))
                 req.timeoutInterval = 2
-                if let (_, resp) = try? await session.data(for: req),
-                   let http = resp as? HTTPURLResponse, http.statusCode < 500 {
-                    lastSearch = "found at \(baseStr)"
-                    return url
+                do {
+                    let (_, resp) = try await session.data(for: req)
+                    if let http = resp as? HTTPURLResponse, http.statusCode < 500 {
+                        lastSearch = "found at \(baseStr)"
+                        return url
+                    }
+                } catch {
+                    // The camera lives at 192.0.0.1 over USB-C; log exactly why it did not answer
+                    // (refused = wrong port, timeout = routing, cannot-connect = no route).
+                    if ip == "192.0.0.1" {
+                        let e = error as? URLError
+                        Log.write("canon probe \(baseStr): \(e.map { "URLError \($0.code.rawValue) \($0.code)" } ?? "\(error)")")
+                    }
                 }
                 tried.append(ip)
             }
