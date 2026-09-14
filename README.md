@@ -32,6 +32,21 @@ you add there moves the arm only. **New program** (the + button) puts a program 
 
 That's it. The app connects to the arm and the rail on its own whenever the cable is in.
 
+## The booth screen
+
+The app opens on the booth screen: the camera, one **CAPTURE** button, STOP. Capture counts
+down, records the guest on this iPad's camera while the chosen program runs (rail + arm, cued by
+the wires), builds the clip with the video template and saves it to Photos, then shows it and
+resets for the next guest. If something is not ready the button is greyed and says why.
+
+Setting it up is on the Programs screen under **Booth**: which program Capture runs, the
+countdown, **Support mode**, and the crew PIN (the app ships with `0000` — change it).
+
+- **Support mode off** (guests): the app opens on the booth screen; leaving it is three taps on
+  the top-left corner, then the PIN.
+- **Support mode on** (crew): the app opens on Programs and the booth screen has a **Support**
+  button, so nobody types the PIN while setting up. Turn it off before the event.
+
 ## Using it
 
 The top strip is always there:
