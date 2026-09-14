@@ -49,10 +49,10 @@ struct ProgramsView: View {
                 }
                 Stepper("Countdown: \(booth.countdown == 0 ? "none" : "\(booth.countdown) s")", value: $booth.countdown, in: 0...10)
                 VStack(alignment: .leading) {
-                    Text("Fire the rig \(booth.lead == 0 ? "when the countdown ends" : "\(Fmt.num(booth.lead)) s before the countdown ends")")
+                    Text(booth.armLag == 0 ? "Arm starts with the rail" : "Arm starts \(Fmt.num(booth.armLag)) s after the rail")
                         .font(.subheadline)
-                    Slider(value: $booth.lead, in: 0...Double(max(1, booth.countdown)), step: 0.5)
-                    Text("Raise this until the arm and rail start right on “1” — it hides the rail's own delay inside the 3-2-1.")
+                    Slider(value: $booth.armLag, in: 0...4, step: 0.25)
+                    Text("How arm and rail sit together. The arm launches on the rail's real motion; raise this only if the shot wants the arm a beat behind the carriage.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Picker("Camera", selection: $booth.camera) {

@@ -34,9 +34,14 @@ final class Booth: ObservableObject {
     /// Record this long after the rig reports done, so the last frames are never cut.
     @Published var tail: Double { didSet { d.set(tail, forKey: "booth.tail") } }
 
-    /// Seconds to fire the rig BEFORE the countdown ends, to cancel the rail's own mechanical
-    /// pre-move delay so the move lands on "1". 0 = fire exactly when the countdown finishes.
+    /// Seconds to fire the rig BEFORE the countdown ends. Default = the whole countdown, so the
+    /// rail is triggered as 3-2-1 begins and spins up during the count.
     @Published var lead: Double { didSet { d.set(lead, forKey: "booth.lead") } }
+
+    /// Fine-tune: seconds the arm waits AFTER the rail starts moving before it joins. 0 = start
+    /// together. Measured from the rail's real motion, so it holds despite the rail's variable
+    /// spin-up. This is the one knob that sets how arm and rail sit together.
+    @Published var armLag: Double { didSet { d.set(armLag, forKey: "booth.armLag") } }
 
     /// The crew PIN Kyle asked for. Changeable on the iPad under Booth; this is the value until
     /// one is set there.
@@ -66,6 +71,7 @@ final class Booth: ObservableObject {
         // Default: fire the rig when the countdown STARTS, so the rail's HTTPS spin-up and the
         // wire cue overlap the 3-2-1 instead of following it. The slider can pull it back toward 0.
         lead = d.object(forKey: "booth.lead") as? Double ?? Double(d.object(forKey: "booth.countdown") as? Int ?? 3)
+        armLag = d.object(forKey: "booth.armLag") as? Double ?? 0
         // Guests first, crew only when asked.
         locked = !d.bool(forKey: "booth.support")
     }
@@ -169,79 +175,73 @@ final class CaptureFlow: ObservableObject {
     private func run(_ program: Program) async {
         Log.write("capture: “\(program.name)” (code \(program.number)) — camera \(booth.camera): \(booth.usesCanon ? canon.label : recorder.status)")
 
-        // 🔑 **The clog was doing all the setup AFTER the countdown.** Enabling the arm, firing the
-        // rail and waiting for the wire cue all ran once "1" had shown, so the guest watched a dead
-        // "Get ready…" for several seconds. Now the whole countdown IS the setup window:
-        //   • prewarm the arm (the slow first-run enable) the instant CAPTURE is pressed, and
-        //   • fire the rig `lead` seconds BEFORE the countdown ends, so the rail's own mechanical
-        //     pre-move delay is spent during 3-2-1 and the move lands on "1".
-        // `lead` is dial-able under Booth (0 = fire exactly at the end); the rig sets how much of
-        // its delay to hide, with no rebuild.
         let onCanon = booth.usesCanon && canon.isReady
         let filming = onCanon || recorder.isRunning
         if !filming { note = "No camera — the rig ran but nothing was recorded." }
 
-        // 🔑 **Deterministic booth timing — the rail spins up during 3-2-1, the arm whips on "1".**
-        // The wire cue is skipped here (it is missed most runs when the same program repeats); the
-        // countdown owns the timing instead. prewarm hides the arm-enable; boothFireRail triggers
-        // the rail as the count starts; boothLaunchArm fires the arm the instant the count ends.
-        let prewarm = Task { await runner.prewarm() }
+        // 🔑 **The rig runs ITSELF, in sync, the way the template was built.** Firing the rail's
+        // program raises the six wires; the xArm's own onboard program reads them and runs its half
+        // of program 14 — arm and rail choreographed in hardware, identical every run. The app does
+        // NOT drive the arm (that is what broke the sync); it fires the rail, watches for the arm to
+        // move, records the template's length, frees the booth, and renders in the background so the
+        // next guest can go immediately.
+        let selfRunning = program.railProgram != nil
 
-        // Fire the rail `lead` seconds before the countdown ends so its own pre-move delay is spent
-        // during the count. Default lead = the whole countdown, i.e. fire as 3-2-1 begins.
+        // Fire the rail as the countdown begins so its spin-up overlaps the 3-2-1.
         let countdownSecs = Double(booth.countdown)
         let lead = min(booth.lead, countdownSecs)
-        let railTask = Task { @MainActor () -> String? in
-            let waitBeforeFiring = max(0, countdownSecs - lead)
-            try? await Task.sleep(nanoseconds: UInt64(waitBeforeFiring * 1_000_000_000))
+        let fireTask = Task { @MainActor () -> String? in
+            try? await Task.sleep(nanoseconds: UInt64(max(0, countdownSecs - lead) * 1_000_000_000))
             if Task.isCancelled { return nil }
-            _ = await prewarm.value
-            return await runner.boothFireRail(program)
+            if selfRunning { return await runner.boothFireSelfRunning(program) }
+            // No rail code: the app drives the arm directly (custom arm-only movement).
+            _ = await runner.prewarm()
+            runner.boothLaunchArm(program)
+            return nil
         }
 
+        // The visible 3-2-1.
         if booth.countdown > 0 {
             for n in stride(from: booth.countdown, through: 1, by: -1) {
                 phase = .countdown(n)
                 Haptics.light()
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
-                if Task.isCancelled { railTask.cancel(); return }
+                if Task.isCancelled { fireTask.cancel(); return }
             }
         }
-        // "1" has landed. Show the live view AT ONCE — the previous build sat on a frozen "1" here
-        // while it awaited the rail's HTTPS trigger. .armed draws "Get ready…" over the live camera.
-        phase = .armed
 
-        // Confirm the rail took the program (this await now happens under the live view, not a
-        // frozen number).
-        if let railError = await railTask.value, !railError.hasPrefix("Done") {
-            phase = .failed(railError)
+        // Live view immediately after "1" — never a frozen number.
+        phase = .armed
+        if let fireError = await fireTask.value, !fireError.hasPrefix("Done") {
+            phase = .failed(fireError)
             return
         }
 
-        // 🔑 **SYNC — the arm launches off the rail's REAL motion, never a clock.** The rail was
-        // fired as the countdown began; wait for the carriage to physically move, then launch the
-        // arm at that instant. The arm therefore starts at the same rail position every run, so arm
-        // and rail stay coordinated — which is what the template depends on. (The six-wire edge is
-        // not used here; it is missed most runs when the same program repeats.)
-        if program.railProgram != nil {
-            _ = await runner.boothWaitRailMoving()
-            if Task.isCancelled { return }
-            // The choreography offset: how far into the rail's travel the arm joins. This is the
-            // program's armDelay, now measured from the rail's real motion — the one number that
-            // sets how arm and rail sit together, tunable in the program editor while watching.
-            if program.armDelay > 0 {
-                try? await Task.sleep(nanoseconds: UInt64(program.armDelay * 1_000_000_000))
-                if Task.isCancelled { return }
+        // Record the instant the arm actually moves — for a self-running program that is the onboard
+        // arm going (watched passively over Modbus); for an app-driven movement it is our own launch.
+        if selfRunning {
+            // Wait for the onboard program to move the arm. If it does not within a short window,
+            // fall back to driving the arm ourselves so the booth is never dead — worst case that
+            // is the old app-driven behaviour, best case the rig moved itself in perfect sync.
+            let movedItself = await runner.boothWaitArmMoving(timeout: 8)
+            if !movedItself, !Task.isCancelled {
+                Log.write("booth: arm did not self-run — falling back to app-driving it")
+                note = "Arm driven by the app (it did not run on its own)"
+                _ = await runner.prewarm()
+                runner.boothLaunchArm(program)
+                let t = Date()
+                while runner.running, !runner.motionStarted, Date().timeIntervalSince(t) < 20, !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 30_000_000)
+                }
+            }
+        } else {
+            let t = Date()
+            while runner.running, !runner.motionStarted, Date().timeIntervalSince(t) < 20, !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 30_000_000)
             }
         }
-
-        Haptics.medium()
-        runner.boothLaunchArm(program)
-        let fired = Date()
-        while runner.running, !runner.motionStarted, Date().timeIntervalSince(fired) < 20, !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: 30_000_000)
-        }
         if Task.isCancelled { return }
+        Haptics.medium()
 
         if onCanon {
             do { try await canon.startMovie() } catch {
@@ -254,10 +254,7 @@ final class CaptureFlow: ObservableObject {
         let recordingStarted = Date()
         phase = .recording
 
-        // 🔑 **Record only what the template needs — not the whole rail travel + return.** The rig
-        // log showed 35 s recordings for an 11 s clip because the booth waited for the carriage to
-        // come home. Grab the template's seconds from the move, stop, and let the rail return on its
-        // own while the result is already on screen. The next guest is positioning during that.
+        // Record only the template's length + tail, from the move. Not the whole rail travel+return.
         let need = BoothTemplate.recordingSecondsNeeded + max(0, booth.tail)
         while Date().timeIntervalSince(recordingStarted) < need, !Task.isCancelled {
             try? await Task.sleep(nanoseconds: 100_000_000)
@@ -283,16 +280,34 @@ final class CaptureFlow: ObservableObject {
         }
         Log.write("capture: recorded \(raw.lastPathComponent)")
 
-        phase = .rendering
-        do {
-            let clip = try await TimelineExporter.export(recordingURL: raw)
-            try await Self.saveToPhotos(clip)
-            Log.write("capture: clip saved to Photos — \(clip.lastPathComponent)")
-            Haptics.success()
-            phase = .done(clip)
-        } catch {
-            Log.write("capture: render FAILED — \(error.localizedDescription)")
-            phase = .failed("Could not build the clip: \(error.localizedDescription)")
+        // 🔑 **Render in the BACKGROUND — free the booth NOW.** The original let the next guest go
+        // while the clip built; so do we. The booth returns to Ready immediately; a detached task
+        // builds the clip and saves it to Photos. A capture cannot start mid-render (the rig still
+        // needs to finish returning), so `reset()` waits on nothing but the previous render's rig.
+        phase = .idle
+        note = nil
+
+        // Let the carriage finish returning in the background. The rig stays "running" (so the next
+        // CAPTURE waits) only until it is actually home — which overlaps the next guest stepping in.
+        if selfRunning {
+            Task { @MainActor in
+                await rail.waitUntilStill()
+                runner.boothFinishedSelfRunning()
+            }
+        }
+
+        // Build and save the clip in the background so the booth is free right now.
+        Task.detached {
+            do {
+                let clip = try await TimelineExporter.export(recordingURL: raw)
+                try await Self.saveToPhotos(clip)
+                await MainActor.run {
+                    Log.write("capture: clip saved to Photos (background) — \(clip.lastPathComponent)")
+                    Haptics.success()
+                }
+            } catch {
+                await MainActor.run { Log.write("capture: background render FAILED — \(error.localizedDescription)") }
+            }
         }
     }
 

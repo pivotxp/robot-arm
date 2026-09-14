@@ -72,6 +72,60 @@ final class Runner: ObservableObject {
         return nil
     }
 
+    // MARK: - Booth: fire program 14, let the ARM MOVE ITSELF, just watch
+    //
+    // 🔑 **This is how the original worked, and how the template was built.** Firing the rail's
+    // program raises the six wires; the xArm's OWN onboard program reads them and runs its half of
+    // program 14 — arm and rail choreographed in hardware, perfectly synced every time. The app must
+    // NOT drive the arm here (no enable, no joint commands) or it takes the control the onboard
+    // program needs. It only fires the rail and watches, passively, for the arm to move.
+
+    /// Fire the rail's stored program WITHOUT touching the arm. The RunProgram pulse raises the
+    /// wires that cue the arm's onboard program. Returns nil, or a reason it could not start.
+    @discardableResult
+    func boothFireSelfRunning(_ program: Program) async -> String? {
+        guard let n = program.railProgram else { return "This program has no rail code" }
+        guard rail.connected else { return "Rail is not connected" }
+        guard rail.homed == "1" else { return "Rail is not referenced — tap Home the rail first" }
+        status = "Running program \(n)…"
+        running = true
+        motionStarted = false
+        guard await rail.runProgram(n) else {
+            running = false
+            return rail.lastError.isEmpty ? "Rail refused program \(n)" : rail.lastError
+        }
+        return nil
+    }
+
+    /// Watch the arm's own joints (fast Modbus, no control taken) until the onboard program starts
+    /// moving them. Returns true when motion is seen. This is the recording anchor — it fires the
+    /// instant the arm actually moves, so the clip and the template start on the real motion.
+    func boothWaitArmMoving(timeout: Double = 15, threshold: Double = 2) async -> Bool {
+        let start = await arm.readJoints() ?? []
+        guard !start.isEmpty else {
+            // No arm telemetry — fall back to the rail's motion so recording still anchors to the rig.
+            return await rail.waitUntilMoving()
+        }
+        let t0 = Date()
+        while Date().timeIntervalSince(t0) < timeout {
+            if let now = await arm.readJoints(), now.count == start.count,
+               zip(now, start).contains(where: { abs($0 - $1) > threshold }) {
+                motionStarted = true
+                Log.write(String(format: "booth: arm moving on its own %.2f s after fired", Date().timeIntervalSince(t0)))
+                return true
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        Log.write("booth: arm never moved on its own within \(Int(timeout)) s")
+        return false
+    }
+
+    /// The self-running program finishes on its own; let the booth mark it done and free the runner.
+    func boothFinishedSelfRunning() {
+        running = false
+        motionStarted = false
+    }
+
     /// True once the rail has physically started moving after boothFireRail. The booth waits on
     /// this and launches the arm the instant it returns, so the two are coordinated every run.
     func boothWaitRailMoving() async -> Bool { await rail.waitUntilMoving() }
