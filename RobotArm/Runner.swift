@@ -27,6 +27,8 @@ final class Runner: ObservableObject {
 
     /// How long to wait for the wires. The rail's longest start delay (program 6) is 9.4 s, and
     /// the wires may come up as late as the movement does.
+    /// Corner-blend radius (degrees) for joint moves, so poses flow into one another.
+    static let defaultBlend: Double = 30
     static let signalTimeout: Double = 6   // a booth fallback: if the wire edge is missed, do not make the guest wait 15 s
 
     private var task: Task<Void, Never>?
@@ -249,8 +251,15 @@ final class Runner: ObservableObject {
             let ok: Bool
             switch step.kind {
             case .joint:
+                // 🔑 **Blend through the poses so the arm flows, not stutters.** radius=0 makes the
+                // arm decelerate to a full stop at every pose — the stuttery look in the "wrong"
+                // video. A blend radius lets the controller round the corner and keep moving, which
+                // is the smooth sweep of the real program 14. A pose that holds, or the last pose,
+                // keeps 0 so it settles cleanly.
+                let isLast = (i == steps.count - 1)
+                let blend = (step.pauseAfter > 0 || isLast) ? 0 : max(step.radius, Self.defaultBlend)
                 ok = await arm.moveJoints(step.joints, speed: min(step.speed, Limits.maxJointSpeed),
-                                          acc: max(step.acc, 1), radius: step.radius)
+                                          acc: max(step.acc, 1), radius: blend)
             case .line:
                 ok = await arm.moveLine(step.pose, speed: min(step.speed, Limits.maxLineSpeed),
                                         acc: max(step.acc, 1), radius: step.radius)
