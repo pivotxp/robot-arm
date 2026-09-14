@@ -7,14 +7,22 @@
 	     (192.168.x.x) addresses, never for the public internet. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<!-- The Canon on USB-C serves CCAPI as plain http at 192.0.0.1:8080. That address is not
-		     one of the private ranges NSAllowsLocalNetworking covers, so without arbitrary loads
-		     iOS blocks it with error -1022. This matches the working AuraBooth build. The rig is a
-		     closed local network with no internet, so this opens nothing to the outside. -->
+		<!-- ATS off for the whole rig. It is a closed local network with no internet: the rail's
+		     PLC is https with an old self-signed cert, and the Canon on USB-C serves CCAPI as plain
+		     http at 192.0.0.1:8080. NSAllowsLocalNetworking is deliberately NOT set here — when it
+		     is present iOS ignores NSAllowsArbitraryLoads, and 192.0.0.1 is not a range ATS counts
+		     as "local", so the camera load was blocked with error -1022. Arbitrary loads alone lets
+		     both through; the explicit 192.0.0.1 exception is belt-and-suspenders. -->
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>192.0.0.1</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
 	</dict>
 	<!-- Show the app's Documents folder (the program files) in the Files app, so a program can
 	     also be edited as plain text if you ever want to. -->
