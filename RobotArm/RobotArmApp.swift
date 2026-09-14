@@ -30,6 +30,7 @@ struct RobotArmApp: App {
                 arm.startAutoConnect()
                 rail.startAutoConnect()
                 Log.write("launch — build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?")")
+                Log.write("camera devices: \(Recorder.videoDeviceList())")
                 watchNetwork()
                 await runLaunchRequest()
             }

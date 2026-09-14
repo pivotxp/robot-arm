@@ -39,6 +39,20 @@ final class Recorder: NSObject, ObservableObject {
     /// True when a Canon (external USB-C camera) is currently attached.
     static var canonAttached: Bool { externalCamera() != nil }
 
+    /// Every video capture device iPadOS currently sees, for the log — so we can tell whether the
+    /// Canon is showing up as an external camera at all.
+    static func videoDeviceList() -> String {
+        var types: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera]
+        if #available(iOS 17.0, *) { types.append(.external) }
+        let ds = AVCaptureDevice.DiscoverySession(deviceTypes: types, mediaType: .video, position: .unspecified)
+        let list = ds.devices.map { d -> String in
+            var kind = "built-in"
+            if #available(iOS 17.0, *), d.deviceType == .external { kind = "EXTERNAL" }
+            return "\(d.localizedName) [\(kind)]"
+        }
+        return list.isEmpty ? "none" : list.joined(separator: ", ")
+    }
+
     /// Ask for camera access during setup, not on the booth screen in front of a guest.
     static func prepareAuthorization() async {
         let before = AVCaptureDevice.authorizationStatus(for: .video)
