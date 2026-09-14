@@ -84,6 +84,7 @@ struct StatusStrip: View {
     }
 
     private var railDetail: String {
+        if !rail.connected, Net.wrongSubnet { return "on 192.168.50.x — set Ethernet to 192.168.1.50" }
         guard rail.connected else { return rail.lastError.isEmpty ? "waiting…" : rail.lastError }
         if let f = rail.foreignMotion { return f }
         return "at \(rail.currentPosition) mm" + (rail.homed == "1" ? "" : " · not homed")
@@ -173,7 +174,13 @@ extension RobotArmApp {
                 let now = Canon.interfaces().joined(separator: ", ")
                 if now != last {
                     let hasRig = now.contains("192.168.1.")
-                    Log.write("network: \(now.isEmpty ? "no addresses" : now)\(hasRig ? "" : " — NO 192.168.1.x ADDRESS: the rail and arm are unreachable (Settings → Ethernet → Manual 192.168.1.50)")")
+                    // A very easy transposition: 192.168.50.1 instead of 192.168.1.50. Call it out.
+                    let transposed = now.contains("192.168.50.") && !hasRig
+                    let hint: String
+                    if hasRig { hint = "" }
+                    else if transposed { hint = " — WRONG SUBNET: you're on 192.168.50.x but the rail is on 192.168.1.x. The address is transposed — set the Ethernet to 192.168.1.50 (one-dot-two), not 192.168.50.1." }
+                    else { hint = " — NO 192.168.1.x ADDRESS: the rail and arm are unreachable (Settings → Ethernet → Manual 192.168.1.50)" }
+                    Log.write("network: \(now.isEmpty ? "no addresses" : now)\(hint)")
                     last = now
                 }
                 try? await Task.sleep(nanoseconds: 5_000_000_000)
