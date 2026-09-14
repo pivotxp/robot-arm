@@ -7,6 +7,12 @@
 	     (192.168.x.x) addresses, never for the public internet. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
+		<!-- The Canon on USB-C serves CCAPI as plain http at 192.0.0.1:8080. That address is not
+		     one of the private ranges NSAllowsLocalNetworking covers, so without arbitrary loads
+		     iOS blocks it with error -1022. This matches the working AuraBooth build. The rig is a
+		     closed local network with no internet, so this opens nothing to the outside. -->
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
