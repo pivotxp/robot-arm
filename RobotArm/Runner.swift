@@ -46,6 +46,53 @@ final class Runner: ObservableObject {
               armDelay: program.armDelay, steps: program.steps)
     }
 
+    // MARK: - Booth: rail during the countdown, arm on "1"
+    //
+    // 🔑 **The booth does NOT wait on the six-wire cue.** Running the same program (14) over and
+    // over, the PLC holds the last number on the wires, so the ≠n→n edge often never comes — the
+    // rig log showed it caught only 1 run in 3, and a miss cost the full timeout. So for the booth
+    // the timing is deterministic and owned by the countdown: fire the rail when 3-2-1 starts so it
+    // spins up during the count, then launch the arm the instant the count ends. Both are moving
+    // right on "1", every time, with no edge to miss. The Programs-screen Run still uses the wire
+    // cue via run()/execute() — that is where syncing to an arbitrary stored program matters.
+
+    /// Fire the rail (and ready the arm) without moving the arm. Returns nil, or a reason it could
+    /// not start. Leaves the rail's stored program running.
+    @discardableResult
+    func boothFireRail(_ program: Program) async -> String? {
+        guard arm.connected else { return "Arm is not connected" }
+        if let why = await prepareArm() { return why }
+        guard let n = program.railProgram else { return nil }
+        guard rail.connected else { return "Rail is not connected" }
+        guard rail.homed == "1" else { return "Rail is not referenced — tap Home the rail first" }
+        status = "Starting rail program \(n)…"
+        guard await rail.runProgram(n) else {
+            return rail.lastError.isEmpty ? "Rail refused program \(n)" : rail.lastError
+        }
+        return nil
+    }
+
+    /// Launch the arm now — no wire wait, no armDelay. This is the task the booth watches via
+    /// `running` / `motionStarted`, and it owns the rail's return afterwards.
+    func boothLaunchArm(_ program: Program) {
+        guard !running else { status = "Already running — press STOP first"; return }
+        guard !program.steps.isEmpty else { status = "\(program.name) has no steps"; return }
+        running = true
+        motionStarted = false
+        task = Task { @MainActor in
+            let why = await runArmSteps(name: program.name, steps: program.steps)
+            if program.railProgram != nil, rail.connected {
+                status = "Arm done — rail finishing…"
+                await rail.waitUntilStill()
+            }
+            if !Task.isCancelled {
+                status = why ?? "Done — \(program.name)"
+                running = false
+                motionStarted = false
+            }
+        }
+    }
+
     /// Try one step on the arm only (used by "Move arm here" in the step editor).
     func test(_ step: Step) {
         var s = step
@@ -133,6 +180,74 @@ final class Runner: ObservableObject {
     }
 
     /// Returns the final status text.
+    /// The arm half of a run: hand every step over, then wait until the arm is at rest. Shared by
+    /// the Programs-screen run and the booth, so both drive the arm identically. Returns nil on
+    /// success or a reason string. Sets `motionStarted` the instant the first command is sent.
+    private func runArmSteps(name: String, steps: [Step]) async -> String? {
+        motionStarted = true
+        status = "Running \(name)…"
+        var pauseTotal: Double = 0
+        for (i, step) in steps.enumerated() {
+            let ok: Bool
+            switch step.kind {
+            case .joint:
+                ok = await arm.moveJoints(step.joints, speed: min(step.speed, Limits.maxJointSpeed),
+                                          acc: max(step.acc, 1), radius: step.radius)
+            case .line:
+                ok = await arm.moveLine(step.pose, speed: min(step.speed, Limits.maxLineSpeed),
+                                        acc: max(step.acc, 1), radius: step.radius)
+            case .home:
+                ok = await arm.home(speed: min(step.speed, Limits.maxJointSpeed), acc: max(step.acc, 1))
+            case .pause:
+                ok = true
+            }
+            guard ok else {
+                await arm.stop()
+                await arm.refreshStatus()
+                preparedGeneration = -1
+                let why = arm.errorCode != 0 ? " — \(arm.faultText)" : ""
+                return "Arm rejected step \(i + 1)\(why)"
+            }
+            if step.pauseAfter > 0 {
+                guard await arm.queuePause(step.pauseAfter) else {
+                    await arm.stop()
+                    preparedGeneration = -1
+                    return "Arm rejected the pause after step \(i + 1)"
+                }
+                pauseTotal += step.pauseAfter
+            }
+            if Task.isCancelled { return "STOPPED" }
+        }
+
+        let started = Date()
+        let minimumRun = pauseTotal
+        var quiet = 0
+        while true {
+            if Task.isCancelled { return "STOPPED" }
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            if !arm.connected { preparedGeneration = -1; return "Lost the arm mid-run" }
+            if let e = await arm.getError(), e != 0 {
+                await arm.refreshStatus()
+                preparedGeneration = -1
+                return "Arm fault \(e): \(arm.faultText)"
+            }
+            let st = await arm.getState() ?? 0
+            if st >= 4 { preparedGeneration = -1; return "Arm stopped itself (state \(st))" }
+            if st == 3 { preparedGeneration = -1; return "Arm is PAUSED on the controller" }
+            let queued = await arm.queuedCommands() ?? 0
+            let elapsed = Date().timeIntervalSince(started)
+            if st == 1 || queued > 0 || elapsed < minimumRun {
+                quiet = 0
+            } else {
+                quiet += 1
+                if quiet >= 3 { break }
+            }
+            if elapsed > 15 * 60 { return "Gave up waiting after 15 minutes" }
+        }
+        await arm.refreshStatus()
+        return nil
+    }
+
     private func execute(name: String, railProgram: Int?, armStart: ArmStart, armDelay: Double, steps: [Step]) async -> String {
         // 1. Get the arm ready. Only the slow part (enable + tool setup) is skipped when the arm
         //    is already connected, ready and fault-free from a previous run.
@@ -181,69 +296,10 @@ final class Runner: ObservableObject {
             }
         }
 
-        // 3. Hand every step to the arm. The arm queues them and plays them back to back.
-        motionStarted = true
-        status = "Running \(name)…"
-        var pauseTotal: Double = 0
-        for (i, step) in steps.enumerated() {
-            let ok: Bool
-            switch step.kind {
-            case .joint:
-                ok = await arm.moveJoints(step.joints, speed: min(step.speed, Limits.maxJointSpeed),
-                                          acc: max(step.acc, 1), radius: step.radius)
-            case .line:
-                ok = await arm.moveLine(step.pose, speed: min(step.speed, Limits.maxLineSpeed),
-                                        acc: max(step.acc, 1), radius: step.radius)
-            case .home:
-                ok = await arm.home(speed: min(step.speed, Limits.maxJointSpeed), acc: max(step.acc, 1))
-            case .pause:
-                ok = true
-            }
-            guard ok else {
-                await arm.stop()
-                await arm.refreshStatus()
-                preparedGeneration = -1
-                let why = arm.errorCode != 0 ? " — \(arm.faultText)" : ""
-                return "Arm rejected step \(i + 1)\(why)"
-            }
-            if step.pauseAfter > 0 {
-                guard await arm.queuePause(step.pauseAfter) else {
-                    await arm.stop()
-                    preparedGeneration = -1
-                    return "Arm rejected the pause after step \(i + 1)"
-                }
-                pauseTotal += step.pauseAfter
-            }
-            if Task.isCancelled { return "STOPPED" }
+        // 3. Run the arm steps and wait for it to come to rest.
+        if let why = await runArmSteps(name: name, steps: steps) {
+            return why
         }
-
-        // 4. Wait until the arm has nothing left to do.
-        let started = Date()
-        let minimumRun = pauseTotal   // the arm cannot be done before its pauses have elapsed
-        var quiet = 0
-        while true {
-            if Task.isCancelled { return "STOPPED" }
-            try? await Task.sleep(nanoseconds: 200_000_000)
-            if !arm.connected { preparedGeneration = -1; return "Lost the arm mid-run" }
-            if let e = await arm.getError(), e != 0 {
-                await arm.refreshStatus()
-                preparedGeneration = -1
-                return "Arm fault \(e): \(arm.faultText)"
-            }
-            let st = await arm.getState() ?? 0
-            if st >= 4 { preparedGeneration = -1; return "Arm stopped itself (state \(st))" }
-            if st == 3 { preparedGeneration = -1; return "Arm is PAUSED on the controller" }
-            let queued = await arm.queuedCommands() ?? 0
-            let elapsed = Date().timeIntervalSince(started)
-            if st == 1 || queued > 0 || elapsed < minimumRun {
-                quiet = 0
-            } else {
-                quiet += 1
-                if quiet >= 3 { break }          // 0.6 s of nothing happening
-            }
-            if elapsed > 15 * 60 { return "Gave up waiting after 15 minutes" }
-        }
-        await arm.refreshStatus()
 
         // 5. The rail may still be on its way back — program 14 returns to 0 after the arm has
         //    finished. Done means the whole rig is at rest, so a capture keeps rolling and the

@@ -181,42 +181,49 @@ final class CaptureFlow: ObservableObject {
         let filming = onCanon || recorder.isRunning
         if !filming { note = "No camera — the rig ran but nothing was recorded." }
 
+        // 🔑 **Deterministic booth timing — the rail spins up during 3-2-1, the arm whips on "1".**
+        // The wire cue is skipped here (it is missed most runs when the same program repeats); the
+        // countdown owns the timing instead. prewarm hides the arm-enable; boothFireRail triggers
+        // the rail as the count starts; boothLaunchArm fires the arm the instant the count ends.
         let prewarm = Task { await runner.prewarm() }
 
-        // Fire the rig on its own clock, `lead` seconds before the visible countdown finishes.
+        // Fire the rail `lead` seconds before the countdown ends so its own pre-move delay is spent
+        // during the count. Default lead = the whole countdown, i.e. fire as 3-2-1 begins.
         let countdownSecs = Double(booth.countdown)
-        let lead = min(booth.lead, countdownSecs)      // never fire before the countdown starts
-        let fireTask = Task { @MainActor in
+        let lead = min(booth.lead, countdownSecs)
+        let railTask = Task { @MainActor () -> String? in
             let waitBeforeFiring = max(0, countdownSecs - lead)
             try? await Task.sleep(nanoseconds: UInt64(waitBeforeFiring * 1_000_000_000))
-            if Task.isCancelled { return }
-            _ = await prewarm.value          // make sure the arm is enabled before the trigger
-            runner.run(program)
+            if Task.isCancelled { return nil }
+            _ = await prewarm.value
+            return await runner.boothFireRail(program)
         }
 
-        // The visible 3-2-1, independent of when the rig actually fires.
         if booth.countdown > 0 {
             for n in stride(from: booth.countdown, through: 1, by: -1) {
                 phase = .countdown(n)
                 Haptics.light()
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
-                if Task.isCancelled { fireTask.cancel(); return }
+                if Task.isCancelled { railTask.cancel(); return }
             }
         }
-        _ = await fireTask.value             // rig has now been fired (or already was, mid-countdown)
-
-        // The move is underway or about to be — the camera starts the instant the arm goes.
-        phase = .armed
-        let fired = Date()
-        while runner.running, !runner.motionStarted, Date().timeIntervalSince(fired) < 30, !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: 50_000_000)
-        }
-        if Task.isCancelled { return }
-        guard runner.running else {
-            // Refused before it started — the reason is on the status line.
-            phase = .failed(runner.status)
+        let railError = await railTask.value
+        if let railError, !railError.hasPrefix("Done") {
+            // The rail would not go — do not leave the guest staring at a countdown that led nowhere.
+            phase = .failed(railError)
             return
         }
+
+        // "1" has landed — launch the arm now and start the camera the instant it moves.
+        phase = .armed
+        Haptics.medium()
+        runner.boothLaunchArm(program)
+        let fired = Date()
+        while runner.running, !runner.motionStarted, Date().timeIntervalSince(fired) < 20, !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 30_000_000)
+        }
+        if Task.isCancelled { return }
+
         if onCanon {
             do { try await canon.startMovie() } catch {
                 Log.write("capture: Canon would not start recording — \(error.localizedDescription)")
@@ -228,25 +235,18 @@ final class CaptureFlow: ObservableObject {
         let recordingStarted = Date()
         phase = .recording
 
-        // Wait for the rig, but never forever.
-        while runner.running, Date().timeIntervalSince(fired) < 120, !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: 200_000_000)
+        // 🔑 **Record only what the template needs — not the whole rail travel + return.** The rig
+        // log showed 35 s recordings for an 11 s clip because the booth waited for the carriage to
+        // come home. Grab the template's seconds from the move, stop, and let the rail return on its
+        // own while the result is already on screen. The next guest is positioning during that.
+        let need = BoothTemplate.recordingSecondsNeeded + max(0, booth.tail)
+        while Date().timeIntervalSince(recordingStarted) < need, !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 100_000_000)
         }
         if Task.isCancelled { return }
-        let rigResult = runner.status
-        if !rigResult.hasPrefix("Done") {
-            note = rigResult
-            Log.write("capture: rig reported “\(rigResult)”")
-        }
 
-        // At least as long as the template needs, plus the tail.
-        let need = BoothTemplate.recordingSecondsNeeded + max(0, booth.tail)
-        let have = Date().timeIntervalSince(recordingStarted)
-        if have < need {
-            try? await Task.sleep(nanoseconds: UInt64((need - have) * 1_000_000_000))
-        }
         guard filming else {
-            phase = rigResult.hasPrefix("Done") ? .failed("The rig ran, but there is no camera to record with.") : .failed(rigResult)
+            phase = .failed("The rig ran, but there is no camera to record with.")
             return
         }
         let raw: URL
