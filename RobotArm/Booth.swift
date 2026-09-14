@@ -32,10 +32,16 @@ final class Booth: ObservableObject {
     @Published var camera: String { didSet { d.set(camera, forKey: "booth.camera") } }
     var usesCanon: Bool { camera == "canon" }
 
-    /// True when the booth program runs its OWN arm move in hardware: it has a rail program and the
-    /// arm is cued by the rail's six wires. For these, the app must stay off the arm (so the robot's
-    /// onboard program can run) and only trigger the rail — the back end drives the arm, not the app.
+    /// Whether the booth lets the robot's OWN onboard program run the arm (app triggers the rail
+    /// only, off the arm) instead of the app driving the arm's joint steps like the Run button does.
+    ///
+    /// Default OFF: the onboard program has to be actively RUNNING on the xArm to respond to the
+    /// rail's six-wire cue, and on this rig it is not — so triggering the rail alone just slides the
+    /// carriage while the arm sits still. The Run button's app-driven motion IS the good one, so the
+    /// booth drives the arm the same way. Flip "booth.useOnboardArm" on only once the robot's onboard
+    /// program is confirmed running.
     var programIsSelfRunning: Bool {
+        guard d.bool(forKey: "booth.useOnboardArm") else { return false }
         guard let n = program, let p = ProgramStore.shared.program(n) else { return false }
         return p.armStart == .signal && p.railProgram != nil
     }
@@ -242,12 +248,10 @@ final class CaptureFlow: ObservableObject {
         let filming = onCanon || recorder.isRunning
         if !filming { note = "No camera — the rig ran but nothing was recorded." }
 
-        // 🔑 SELF-RUNNING: the arm runs its OWN onboard program in hardware, cued by the rail's six
-        // wires. The app only triggers the rail — the RunProgram pulse drops and re-raises the wires,
-        // and the robot's program 14 runs itself, in sync, exactly like the original. The app never
-        // touches the arm (a control connection would block the onboard program). `driveArm` is
-        // false for these; true only for old app-driven programs.
-        let selfRunning = program.armStart == .signal && program.railProgram != nil
+        // Drive the arm the same way the Run button does (app sends the joint steps) unless the
+        // booth is explicitly set to let the robot's onboard program run it. Default is app-driven,
+        // because that is the motion that actually works on this rig; self-running left the arm still.
+        let selfRunning = booth.programIsSelfRunning
         let driveArm = !selfRunning
 
         fired = false
