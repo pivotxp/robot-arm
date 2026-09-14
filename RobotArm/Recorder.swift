@@ -18,13 +18,26 @@ final class Recorder: NSObject, ObservableObject {
     let session = AVCaptureSession()
     private let output = AVCaptureMovieFileOutput()
     private var device: AVCaptureDevice?
-    private var rotation: AVCaptureDevice.RotationCoordinator?
+    private var rotation: AVCaptureDevice.RotationCoordinator?  // nil for external cameras
     private var finish: ((URL?) -> Void)?
 
-    /// Which side of the iPad faces the guest. Stored so it survives a relaunch.
-    var facing: AVCaptureDevice.Position {
-        UserDefaults.standard.string(forKey: "booth.camera") == "front" ? .front : .back
+    /// The booth camera setting: "canon" (the Canon over USB-C as an external video camera),
+    /// "front" or "back" (this iPad's own cameras).
+    var source: String { UserDefaults.standard.string(forKey: "booth.camera") ?? "back" }
+    var facing: AVCaptureDevice.Position { source == "front" ? .front : .back }
+
+    /// The Canon shows up over USB-C as an external AVCapture device once it is in movie/streaming
+    /// (UVC) mode — this is the AuraBooth path: no CCAPI, no PTP, just a video device.
+    static func externalCamera() -> AVCaptureDevice? {
+        var types: [AVCaptureDevice.DeviceType] = []
+        if #available(iOS 17.0, *) { types.append(.external) }
+        guard !types.isEmpty else { return nil }
+        return AVCaptureDevice.DiscoverySession(deviceTypes: types, mediaType: .video, position: .unspecified)
+            .devices.first
     }
+
+    /// True when a Canon (external USB-C camera) is currently attached.
+    static var canonAttached: Bool { externalCamera() != nil }
 
     /// Ask for camera access during setup, not on the booth screen in front of a guest.
     static func prepareAuthorization() async {
@@ -39,8 +52,19 @@ final class Recorder: NSObject, ObservableObject {
     func start() async {
         guard !isRunning else { return }
         Log.write("camera: starting (permission \(AVCaptureDevice.authorizationStatus(for: .video).rawValue): 0 undetermined, 1 restricted, 2 denied, 3 allowed)")
-        guard let cam = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: facing)
-                ?? AVCaptureDevice.default(for: .video) else {
+        let cam: AVCaptureDevice?
+        if source == "canon" {
+            cam = Self.externalCamera()
+            if cam == nil {
+                status = "Canon not detected over USB-C — set the camera to movie/streaming (UVC) mode"
+                Log.write("camera: canon (external) not found over USB-C")
+                return
+            }
+        } else {
+            cam = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: facing)
+                ?? AVCaptureDevice.default(for: .video)
+        }
+        guard let cam else {
             status = "No camera on this device"
             Log.write("camera: none found")
             return
@@ -67,12 +91,14 @@ final class Recorder: NSObject, ObservableObject {
         session.commitConfiguration()
         device = cam
         pickFormat(cam)
-        rotation = AVCaptureDevice.RotationCoordinator(device: cam, previewLayer: nil)
+        // An external (Canon) camera already outputs a level, correctly-oriented image; the
+        // horizon-level rotation is only for the iPad's own cameras.
+        rotation = source == "canon" ? nil : AVCaptureDevice.RotationCoordinator(device: cam, previewLayer: nil)
 
         let s = session
         await Task.detached { s.startRunning() }.value
         isRunning = true
-        Log.write("camera: \(facing == .front ? "front" : "back") running — \(status)")
+        Log.write("camera: \(source) running — \(status)")
     }
 
     func stop() {
