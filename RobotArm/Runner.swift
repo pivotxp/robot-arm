@@ -236,6 +236,15 @@ final class Runner: ObservableObject {
             if elapsed > 15 * 60 { return "Gave up waiting after 15 minutes" }
         }
         await arm.refreshStatus()
+
+        // 5. The rail may still be on its way back — program 14 returns to 0 after the arm has
+        //    finished. Done means the whole rig is at rest, so a capture keeps rolling and the
+        //    next Run cannot start into a moving carriage.
+        if railProgram != nil, rail.connected {
+            status = "Arm done — rail finishing…"
+            await rail.waitUntilStill()
+            if Task.isCancelled { return "STOPPED" }
+        }
         return "Done — \(name)" + fallbackNote
     }
 

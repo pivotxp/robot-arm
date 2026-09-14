@@ -35,6 +35,34 @@ final class RailLink: ObservableObject {
     /// spends an afternoon blaming the control box.
     @Published private(set) var foreignMotion: String?
     private var lastSeen: (mm: Double, at: Date)?
+    /// Movement before this moment is ours. A stored program keeps the carriage moving after
+    /// the arm has finished — program 14 is still on its way back when the runner says Done —
+    /// and that must not be reported as another app driving the rail.
+    private var expectMotionUntil = Date.distantPast
+
+    func expectMotion(seconds: Double) {
+        expectMotionUntil = max(expectMotionUntil, Date().addingTimeInterval(seconds))
+    }
+
+    /// Wait until the carriage has been still for a moment (or `timeout` passes). Used after a
+    /// program so "Done" means the whole rig, not just the arm.
+    func waitUntilStill(timeout: Double = 40) async {
+        let t0 = Date()
+        var last = Double(currentPosition) ?? 0
+        var stillFor = 0.0
+        while Date().timeIntervalSince(t0) < timeout {
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            await refresh()
+            let now = Double(currentPosition) ?? 0
+            if abs(now - last) <= 1.5 {
+                stillFor += 0.4
+                if stillFor >= 1.2, Date().timeIntervalSince(t0) >= 1.2 { return }
+            } else {
+                stillFor = 0
+            }
+            last = now
+        }
+    }
 
     @Published private(set) var connected = false
     @Published private(set) var lastError = ""
@@ -182,6 +210,7 @@ final class RailLink: ObservableObject {
     func runProgram(_ number: Int) async -> Bool {
         let n = min(63, max(0, number))
         Log.write("rail: run program \(n) (at \(currentPosition) mm, homed \(homed))")
+        expectMotion(seconds: 45)
         _ = await write(.manual, "0")
         _ = await write(.enable, "1")
         try? await Task.sleep(nanoseconds: 150_000_000)
@@ -205,7 +234,7 @@ final class RailLink: ObservableObject {
         let mm = Double(currentPosition) ?? 0
         defer { lastSeen = (mm, now) }
         guard let last = lastSeen else { return }
-        let ours = Runner.shared.running || !busy.isEmpty
+        let ours = Runner.shared.running || !busy.isEmpty || now < expectMotionUntil
         if !ours, abs(mm - last.mm) > 3 {
             if foreignMotion == nil {
                 Log.write(String(format: "rail: MOVED %.0f → %.0f mm with nothing running here — another app is driving it", last.mm, mm))
@@ -233,6 +262,7 @@ final class RailLink: ObservableObject {
         busy = "Homing"
         defer { busy = "" }
         Log.write("rail: homing")
+        expectMotion(seconds: 70)
         for tag in [Tag.runProgram, .execute, .executeHoming] { _ = await write(tag, "0") }
         _ = await write(.enable, "0")
         _ = await write(.manual, "0")

@@ -43,6 +43,12 @@ struct ProgramsView: View {
                     }
                 }
                 Stepper("Countdown: \(booth.countdown == 0 ? "none" : "\(booth.countdown) s")", value: $booth.countdown, in: 0...10)
+                Picker("Camera", selection: Binding(
+                    get: { Recorder.shared.facing == .front ? "front" : "back" },
+                    set: { Recorder.shared.facing = $0 == "front" ? .front : .back })) {
+                    Text("Back (faces away from the screen)").tag("back")
+                    Text("Front (faces the screen)").tag("front")
+                }
                 Toggle("Support mode — open the app without the PIN", isOn: $booth.supportMode)
                 Button {
                     newPIN = ""

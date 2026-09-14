@@ -12,6 +12,8 @@ struct BoothView: View {
     @ObservedObject private var recorder = Recorder.shared
     @ObservedObject private var runner = Runner.shared
     @ObservedObject private var store = ProgramStore.shared
+    @ObservedObject private var arm = ArmLink.shared
+    @ObservedObject private var rail = RailLink.shared
 
     @State private var cornerTaps = 0
     @State private var cornerReset: Task<Void, Never>?
@@ -103,6 +105,14 @@ struct BoothView: View {
                     .font(.headline)
                 if recorder.isRunning {
                     Text(recorder.status).font(.caption)
+                }
+                // For the crew: the two links at a glance, only while Support mode is on.
+                if booth.supportMode {
+                    HStack(spacing: 10) {
+                        light(arm.connected, "Arm")
+                        light(rail.connected, "Rail")
+                    }
+                    .font(.caption)
                 }
             }
             .foregroundStyle(.white.opacity(0.85))
@@ -214,6 +224,13 @@ struct BoothView: View {
 
             Spacer()
             Color.clear.frame(width: 120, height: 56)
+        }
+    }
+
+    private func light(_ on: Bool, _ label: String) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(on ? Color.green : Color.red).frame(width: 9, height: 9)
+            Text(label)
         }
     }
 
