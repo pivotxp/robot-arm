@@ -165,18 +165,30 @@ final class Canon: ObservableObject {
     /// Every IPv4 address the iPad holds, with its interface — "en4 192.168.1.50". The rail and
     /// the arm need one on 192.168.1.x; a Canon on the cable shows as 192.0.0.2.
     nonisolated static func interfaces() -> [String] {
-        var out: [String] = []
+        // IPv4 addresses per interface, plus every "en" interface that is UP with only an IPv6
+        // link-local address — that is an adapter iOS can see that has NOT been given its
+        // address, which is a different fault from no adapter at all.
+        var v4: [String: String] = [:]
+        var linkOnly = Set<String>()
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&ifaddr) == 0, let first = ifaddr else { return out }
+        guard getifaddrs(&ifaddr) == 0, let first = ifaddr else { return [] }
         defer { freeifaddrs(ifaddr) }
         for ptr in sequence(first: first, next: { $0.pointee.ifa_next }) {
-            guard let sa = ptr.pointee.ifa_addr, sa.pointee.sa_family == UInt8(AF_INET) else { continue }
+            guard let sa = ptr.pointee.ifa_addr else { continue }
             let name = String(cString: ptr.pointee.ifa_name)
-            guard name != "lo0" else { continue }
+            guard name != "lo0", (ptr.pointee.ifa_flags & UInt32(IFF_UP)) != 0 else { continue }
             var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-            if getnameinfo(sa, socklen_t(sa.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
-                out.append("\(name) \(String(cString: host))")
+            guard getnameinfo(sa, socklen_t(sa.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 else { continue }
+            let ip = String(cString: host)
+            if sa.pointee.sa_family == UInt8(AF_INET) {
+                v4[name] = ip
+            } else if sa.pointee.sa_family == UInt8(AF_INET6), ip.hasPrefix("fe80"), name.hasPrefix("en") {
+                linkOnly.insert(name)
             }
+        }
+        var out = v4.keys.sorted().map { "\($0) \(v4[$0]!)" }
+        for name in linkOnly.sorted() where v4[name] == nil {
+            out.append("\(name) (adapter up, NO address)")
         }
         return out
     }
