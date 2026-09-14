@@ -207,61 +207,30 @@ final class RailLink: ObservableObject {
     /// Manual MUST be 0: a stored program is an "automatic mode" action and the PLC silently
     /// ignores RunProgram while Manual is 1. RunProgram MUST be pulsed back to 0, otherwise the
     /// rail re-runs the program forever.
-    /// True once Manual=0 / Enable=1 have been written and nothing has dropped Enable since.
-    /// Both tags are write-only on this PLC, so this is the only record of the gate's state.
-    private var gateUp = false
-
     func runProgram(_ number: Int) async -> Bool {
         let n = min(63, max(0, number))
-        Log.write("rail: run program \(n) (at \(currentPosition) mm, homed \(homed), gate \(gateUp ? "up" : "unknown"))")
+        Log.write("rail: run program \(n) (at \(currentPosition) mm, homed \(homed))")
         expectMotion(seconds: 45)
-
-        // 🔑 **The 5-second "Getting ready" was this function.** Five HTTPS writes and a
-        // read-back, each a round trip through the S7-1200's web server, before the rail was
-        // even told to go — and the guest was watching a countdown that had already finished.
-        // The raw trigger on port 2000 is one packet with no session: it is what CanonPivotBot
-        // always used, and the PLC's own handler sets the program number and pulses RunProgram.
-        // The only HTTPS the gate genuinely needs is Manual=0 / Enable=1, and those are written
-        // by homing and by stop — so they run here only when the gate is not known to be up.
-        if !gateUp {
-            _ = await write(.manual, "0")
-            _ = await write(.enable, "1")
-            gateUp = true
-            try? await Task.sleep(nanoseconds: 150_000_000)
+        _ = await write(.manual, "0")
+        _ = await write(.enable, "1")
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        guard await write(.programNumber, String(n)) else { return false }
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        await refresh()
+        guard programNum == String(n) else {
+            lastError = "Rail did not accept program \(n) (it reads \(programNum))"
+            return false
         }
-        let fired = await rawRun(n)
-        // Non-gating read-back for the log — the wire watcher is the real confirmation.
-        Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 600_000_000)
-            await self?.refresh()
-            if let self { Log.write("rail: program readback \(self.programNum) after raw trigger \(n)") }
-        }
+        // 🔑 **The RunProgram 1→0 PULSE is the whole point — it makes the PLC drop and re-raise the
+        // six wires, and that edge (≠n → n) is the arm's cue.** Build 126 replaced this with a raw
+        // port-2000 packet to shave latency; the packet does NOT reproduce the edge, so the wires
+        // sat at the last program number, the watcher timed out at 15 s every run, and the rig ran
+        // wrong. Never trade this pulse for the raw trigger. Latency is hidden by firing during the
+        // countdown (see Booth.run), not by changing the trigger.
+        let fired = await write(.runProgram, "1")
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        _ = await write(.runProgram, "0")
         return fired
-    }
-
-    /// The raw trigger: bytes "1" then the program number, to port 2000. No login, no session.
-    private func rawRun(_ n: Int) async -> Bool {
-        guard let port = NWEndpoint.Port(rawValue: Self.asciiPort) else { return false }
-        return await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-            let conn = NWConnection(host: NWEndpoint.Host(Self.host), port: port, using: .tcp)
-            var finished = false
-            func done(_ ok: Bool) {
-                guard !finished else { return }
-                finished = true
-                conn.cancel()
-                cont.resume(returning: ok)
-            }
-            conn.stateUpdateHandler = { st in
-                switch st {
-                case .ready:
-                    conn.send(content: "1\(n)".data(using: .ascii), completion: .contentProcessed { err in done(err == nil) })
-                case .failed, .cancelled: done(false)
-                default: break
-                }
-            }
-            conn.start(queue: .global(qos: .userInitiated))
-            DispatchQueue.global().asyncAfter(deadline: .now() + 4) { done(false) }
-        }
     }
 
     /// Compare this reading with the last one. Movement while nothing here is running is
@@ -323,7 +292,6 @@ final class RailLink: ObservableObject {
         // still up from the homing sequence, so the gate is ready and every run from here can go
         // straight to the raw trigger.
         _ = await write(.manual, "0")
-        gateUp = ok
         Log.write("rail: homing finished — homed \(homed), at \(currentPosition) mm")
         if !ok { lastError = "The rail did not report homed within 60 s" }
         return ok
@@ -353,7 +321,6 @@ final class RailLink: ObservableObject {
     /// Stop the rail, every way we have, in the order that matters.
     func stop() async {
         _ = await write(.enable, "0")
-        gateUp = false
         await rawStop()
         for tag in [Tag.runProgram, .execute, .executeHoming] { _ = await write(tag, "0") }
         _ = await write(.manual, "0")

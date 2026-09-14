@@ -27,7 +27,7 @@ final class Runner: ObservableObject {
 
     /// How long to wait for the wires. The rail's longest start delay (program 6) is 9.4 s, and
     /// the wires may come up as late as the movement does.
-    static let signalTimeout: Double = 15
+    static let signalTimeout: Double = 6   // a booth fallback: if the wire edge is missed, do not make the guest wait 15 s
 
     private var task: Task<Void, Never>?
 

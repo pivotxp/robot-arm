@@ -63,7 +63,9 @@ final class Booth: ObservableObject {
         countdown = d.object(forKey: "booth.countdown") as? Int ?? 3
         camera = d.string(forKey: "booth.camera") ?? "back"
         tail = d.object(forKey: "booth.tail") as? Double ?? 1.0
-        lead = d.object(forKey: "booth.lead") as? Double ?? 0
+        // Default: fire the rig when the countdown STARTS, so the rail's HTTPS spin-up and the
+        // wire cue overlap the 3-2-1 instead of following it. The slider can pull it back toward 0.
+        lead = d.object(forKey: "booth.lead") as? Double ?? Double(d.object(forKey: "booth.countdown") as? Int ?? 3)
         // Guests first, crew only when asked.
         locked = !d.bool(forKey: "booth.support")
     }
