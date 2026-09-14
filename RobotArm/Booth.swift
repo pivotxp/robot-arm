@@ -120,7 +120,11 @@ final class CaptureFlow: ObservableObject {
         guard let n = booth.program else { return "No program chosen — Programs → Booth" }
         guard let p = store.program(n) else { return "Program \(n) no longer exists — Programs → Booth" }
         if !arm.connected { return "Arm is not connected" }
-        if booth.usesCanon, !canon.isReady { return "Canon is not connected — \(canon.label)" }
+        if booth.usesCanon {
+            if !canon.isReady { return "Canon is not connected — \(canon.label)" }
+        } else if !recorder.isRunning {
+            return "Camera: \(recorder.status)"
+        }
         if p.railProgram != nil {
             if !rail.connected { return "Rail is not connected" }
             if rail.homed != "1" { return "Rail is not referenced — Programs → Home the rail" }
@@ -154,7 +158,7 @@ final class CaptureFlow: ObservableObject {
     }
 
     private func run(_ program: Program) async {
-        Log.write("capture: “\(program.name)” (code \(program.number))")
+        Log.write("capture: “\(program.name)” (code \(program.number)) — camera \(booth.camera): \(booth.usesCanon ? canon.label : recorder.status)")
         if booth.countdown > 0 {
             for n in stride(from: booth.countdown, through: 1, by: -1) {
                 phase = .countdown(n)

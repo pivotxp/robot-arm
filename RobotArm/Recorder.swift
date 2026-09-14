@@ -42,6 +42,7 @@ final class Recorder: NSObject, ObservableObject {
         }
         guard await AVCaptureDevice.requestAccess(for: .video) else {
             status = "Camera access is off — Settings → Robot Arm → Camera"
+            Log.write("camera: access denied")
             return
         }
 
@@ -66,6 +67,7 @@ final class Recorder: NSObject, ObservableObject {
         let s = session
         await Task.detached { s.startRunning() }.value
         isRunning = true
+        Log.write("camera: \(facing == .front ? "front" : "back") running — \(status)")
     }
 
     func stop() {

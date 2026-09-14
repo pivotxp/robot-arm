@@ -138,7 +138,10 @@ extension RobotArmApp {
             // with `-program N`, which also sets it for the button.
             if let p = d.string(forKey: "program"), let n = Int(p) { booth.program = n }
             booth.locked = true
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            // The booth screen opens the camera; give it a moment, and a few more if it is slow.
+            for _ in 0..<20 where CaptureFlow.shared.blocker != nil {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
             if let why = CaptureFlow.shared.blocker { Log.write("launch request: capture refused — \(why)") }
             else { CaptureFlow.shared.capture() }
         } else if let n = measure {
