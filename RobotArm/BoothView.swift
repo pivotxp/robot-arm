@@ -72,12 +72,18 @@ struct BoothView: View {
                 player = nil
             }
         }
-        .sheet(isPresented: $showPIN) {
-            PINPad { entered in
-                if booth.tryUnlock(entered) { showPIN = false; return true }
-                return false
+        .overlay {
+            // Full screen, no sheet: it appears the instant the third tap lands, over the
+            // whole booth, and goes the instant the PIN is right.
+            if showPIN {
+                PINPad(onCancel: { showPIN = false }) { entered in
+                    if booth.tryUnlock(entered) { showPIN = false; return true }
+                    return false
+                }
+                .transition(.opacity)
             }
         }
+        .animation(.easeOut(duration: 0.15), value: showPIN)
     }
 
     // MARK: Layers
@@ -367,63 +373,95 @@ struct PressStyle: ButtonStyle {
     }
 }
 
-/// Four-digit entry. Returns true from `submit` when the PIN was right.
+/// Four-digit entry, full screen. `submit` returns true when the PIN was right.
 struct PINPad: View {
+    var onCancel: () -> Void
     let submit: (String) -> Bool
     @State private var entered = ""
     @State private var wrong = false
-    @Environment(\.dismiss) private var dismiss
+    @State private var shake = 0
+
+    private let rows: [[String]] = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["", "0", "⌫"]]
 
     var body: some View {
-        VStack(spacing: 24) {
-            Text("Crew PIN").font(.title2.bold())
-            HStack(spacing: 14) {
-                ForEach(0..<4, id: \.self) { i in
-                    Circle()
-                        .strokeBorder(.primary, lineWidth: 1.5)
-                        .background(Circle().fill(i < entered.count ? Color.primary : Color.clear))
-                        .frame(width: 16, height: 16)
+        ZStack {
+            Color.black.opacity(0.82).ignoresSafeArea()
+                .onTapGesture { onCancel() }
+            VStack(spacing: 28) {
+                VStack(spacing: 8) {
+                    Image(systemName: "lock.fill").font(.system(size: 28)).foregroundStyle(.white.opacity(0.7))
+                    Text("Crew PIN")
+                        .font(.system(size: 26, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
                 }
-            }
-            .padding(.bottom, 6)
-            if wrong { Text("Wrong PIN").foregroundStyle(.red).font(.subheadline) }
-            let rows: [[String]] = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["", "0", "⌫"]]
-            ForEach(rows, id: \.self) { row in
                 HStack(spacing: 18) {
-                    ForEach(row, id: \.self) { key in
-                        Button {
-                            press(key)
-                        } label: {
-                            Text(key)
-                                .font(.system(size: 30, weight: .medium))
-                                .frame(width: 76, height: 76)
-                        }
-                        .buttonStyle(.bordered)
-                        .opacity(key.isEmpty ? 0 : 1)
-                        .disabled(key.isEmpty)
+                    ForEach(0..<4, id: \.self) { i in
+                        Circle()
+                            .strokeBorder(.white.opacity(0.7), lineWidth: 1.5)
+                            .background(Circle().fill(i < entered.count ? Color.white : Color.clear))
+                            .frame(width: 18, height: 18)
                     }
                 }
+                .modifier(Shake(times: shake))
+                Text(wrong ? "Wrong PIN" : " ")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Brand.redHi)
+                VStack(spacing: 16) {
+                    ForEach(rows, id: \.self) { row in
+                        HStack(spacing: 16) {
+                            ForEach(row, id: \.self) { key in
+                                Button {
+                                    press(key)
+                                } label: {
+                                    Text(key)
+                                        .font(.system(size: 34, weight: .medium, design: .rounded))
+                                        .foregroundStyle(.white)
+                                        .frame(width: 92, height: 92)
+                                        .background(.white.opacity(key == "⌫" ? 0.08 : 0.16), in: Circle())
+                                }
+                                .buttonStyle(PressStyle())
+                                .opacity(key.isEmpty ? 0 : 1)
+                                .disabled(key.isEmpty)
+                            }
+                        }
+                    }
+                }
+                Button("Cancel") { onCancel() }
+                    .font(.system(size: 18, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .padding(.top, 6)
             }
-            Button("Cancel") { dismiss() }
-                .padding(.top, 8)
+            .padding(40)
         }
-        .padding(36)
-        .presentationDetents([.medium, .large])
     }
 
     private func press(_ key: String) {
         Haptics.light()
+        wrong = false
         if key == "⌫" { _ = entered.popLast(); return }
         guard entered.count < 4 else { return }
         entered += key
         if entered.count == 4 {
             if submit(entered) {
-                dismiss()
+                Haptics.success()
             } else {
                 wrong = true
                 Haptics.error()
+                withAnimation(.default) { shake += 1 }
                 entered = ""
             }
         }
+    }
+}
+
+/// A quick side-to-side shake, for a wrong PIN.
+struct Shake: GeometryEffect {
+    var times: Int
+    var animatableData: CGFloat {
+        get { CGFloat(times) }
+        set { times = Int(newValue) }
+    }
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        ProjectionTransform(CGAffineTransform(translationX: 10 * sin(CGFloat(times) * .pi * 6), y: 0))
     }
 }

@@ -31,6 +31,7 @@ struct RobotArmApp: App {
                 rail.startAutoConnect()
                 Canon.shared.start()
                 Log.write("launch — build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?")")
+                watchNetwork()
                 await runLaunchRequest()
             }
         }
@@ -153,6 +154,30 @@ extension RobotArmApp {
             runner.run(p)
         } else if let n = run {
             Log.write("launch request: no program at code \(n)")
+        }
+    }
+}
+
+
+// MARK: - The iPad's own addresses, in the log
+//
+// The rail and the arm are only reachable when the iPad holds an address on 192.168.1.x on its
+// Ethernet adapter — and iOS drops that manual address whenever the adapter is re-numbered, which
+// plugging anything else into the hub can cause. Writing the addresses down at launch and on
+// every change turns "it won't connect any more" into a line that says which address is missing.
+extension RobotArmApp {
+    private func watchNetwork() {
+        Task.detached {
+            var last = ""
+            while !Task.isCancelled {
+                let now = Canon.interfaces().joined(separator: ", ")
+                if now != last {
+                    let hasRig = now.contains("192.168.1.")
+                    Log.write("network: \(now.isEmpty ? "no addresses" : now)\(hasRig ? "" : " — NO 192.168.1.x ADDRESS: the rail and arm are unreachable (Settings → Ethernet → Manual 192.168.1.50)")")
+                    last = now
+                }
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+            }
         }
     }
 }

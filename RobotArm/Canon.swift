@@ -42,6 +42,7 @@ final class Canon: ObservableObject {
     private var searchTask: Task<Void, Never>?
     private var liveTask: Task<Void, Never>?
     private var busy = false
+    private var searches = 0
 
     private let session: URLSession = {
         let c = URLSessionConfiguration.default
@@ -136,7 +137,30 @@ final class Canon: ObservableObject {
             }
         }
         lastSearch = tried.isEmpty ? "no addresses to try" : "nothing at " + Array(Set(tried)).sorted().joined(separator: ", ")
+        searches += 1
+        if searches == 1 || searches % 12 == 0 {        // once, then about every minute
+            Log.write("canon: \(lastSearch)")
+        }
         return nil
+    }
+
+    /// Every IPv4 address the iPad holds, with its interface — "en4 192.168.1.50". The rail and
+    /// the arm need one on 192.168.1.x; a Canon on the cable shows as 192.0.0.2.
+    nonisolated static func interfaces() -> [String] {
+        var out: [String] = []
+        var ifaddr: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&ifaddr) == 0, let first = ifaddr else { return out }
+        defer { freeifaddrs(ifaddr) }
+        for ptr in sequence(first: first, next: { $0.pointee.ifa_next }) {
+            guard let sa = ptr.pointee.ifa_addr, sa.pointee.sa_family == UInt8(AF_INET) else { continue }
+            let name = String(cString: ptr.pointee.ifa_name)
+            guard name != "lo0" else { continue }
+            var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+            if getnameinfo(sa, socklen_t(sa.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
+                out.append("\(name) \(String(cString: host))")
+            }
+        }
+        return out
     }
 
     private func localIPv4s() -> [String] {
