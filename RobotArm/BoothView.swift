@@ -51,9 +51,11 @@ struct BoothView: View {
         .task {
             await Recorder.prepareAuthorization()
             if PHPhotoLibrary.authorizationStatus(for: .addOnly) == .notDetermined {
-                _ = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+                Log.write("photos: asking for permission")
+                let st = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+                Log.write("photos: permission \(st == .authorized || st == .limited ? "allowed" : "DENIED (\(st.rawValue))")")
             }
-            await recorder.start()
+            if !booth.usesCanon { await recorder.start() }
         }
         .onDisappear { recorder.stop() }
         .onChange(of: flow.phase) { _, p in

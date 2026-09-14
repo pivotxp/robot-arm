@@ -28,16 +28,21 @@ final class Recorder: NSObject, ObservableObject {
 
     /// Ask for camera access during setup, not on the booth screen in front of a guest.
     static func prepareAuthorization() async {
-        if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
-            _ = await AVCaptureDevice.requestAccess(for: .video)
+        let before = AVCaptureDevice.authorizationStatus(for: .video)
+        if before == .notDetermined {
+            Log.write("camera: asking for permission")
+            let ok = await AVCaptureDevice.requestAccess(for: .video)
+            Log.write("camera: permission \(ok ? "allowed" : "DENIED")")
         }
     }
 
     func start() async {
         guard !isRunning else { return }
+        Log.write("camera: starting (permission \(AVCaptureDevice.authorizationStatus(for: .video).rawValue): 0 undetermined, 1 restricted, 2 denied, 3 allowed)")
         guard let cam = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: facing)
                 ?? AVCaptureDevice.default(for: .video) else {
             status = "No camera on this device"
+            Log.write("camera: none found")
             return
         }
         guard await AVCaptureDevice.requestAccess(for: .video) else {
