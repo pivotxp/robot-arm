@@ -22,10 +22,19 @@ struct BoothView: View {
     @State private var showPIN = false
     @State private var player: AVPlayer?
     @State private var autoReset: Task<Void, Never>?
+    @State private var pulse = false
 
     var body: some View {
         ZStack {
             camera
+            // Soft shading top and bottom so text and buttons read over any scene.
+            LinearGradient(stops: [.init(color: .black.opacity(0.55), location: 0),
+                                   .init(color: .clear, location: 0.22),
+                                   .init(color: .clear, location: 0.68),
+                                   .init(color: .black.opacity(0.6), location: 1)],
+                           startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
             VStack(spacing: 0) {
                 top
                 Spacer()
@@ -33,13 +42,12 @@ struct BoothView: View {
                 Spacer()
                 bottom
             }
-            .padding(28)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 26)
         }
         .background(Color.black)
         .statusBarHidden(true)
         .task {
-            // Both permissions now, while the crew is at the iPad — not mid-capture in front of a
-            // guest, where the system dialog would cover the screen at the worst moment.
             await Recorder.prepareAuthorization()
             if PHPhotoLibrary.authorizationStatus(for: .addOnly) == .notDetermined {
                 _ = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
@@ -48,14 +56,13 @@ struct BoothView: View {
         }
         .onDisappear { recorder.stop() }
         .onChange(of: flow.phase) { _, p in
-            // A finished clip plays for a while, then the screen resets for the next guest.
             if case .done(let url) = p {
                 let pl = AVPlayer(url: url)
                 pl.play()
                 player = pl
                 autoReset?.cancel()
                 autoReset = Task {
-                    try? await Task.sleep(nanoseconds: 12_000_000_000)
+                    try? await Task.sleep(nanoseconds: 14_000_000_000)
                     if !Task.isCancelled { next() }
                 }
             } else {
@@ -89,54 +96,61 @@ struct BoothView: View {
         }
     }
 
-    /// Top-left: the tap counter (or the Support button). Top-right: what this booth runs.
+    /// Left: the tap counter (or the Support button). Middle: the wordmark. Right: crew lights.
     private var top: some View {
-        HStack(alignment: .top) {
-            if booth.supportMode {
-                Button {
-                    booth.locked = false
-                } label: {
-                    Label("Support", systemImage: "wrench.and.screwdriver")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 12).padding(.vertical, 8)
-                }
-                .buttonStyle(.bordered)
-                .tint(.white)
-            } else {
-                // Unmarked until the first tap; then three dots count the taps.
-                HStack(spacing: 8) {
-                    ForEach(0..<3, id: \.self) { i in
-                        Circle()
-                            .fill(i < cornerTaps ? Color.white : Color.white.opacity(0.25))
-                            .frame(width: 12, height: 12)
-                    }
-                }
-                .padding(.horizontal, 14).padding(.vertical, 12)
-                .background(.black.opacity(0.35), in: Capsule())
-                .opacity(cornerTaps > 0 ? 1 : 0)
-                .frame(width: 150, height: 90, alignment: .topLeading)
-                .contentShape(Rectangle())
-                .onTapGesture { cornerTap() }
-                .animation(.easeOut(duration: 0.15), value: cornerTaps)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(programName)
-                    .font(.headline)
+        ZStack {
+            HStack(alignment: .top) {
                 if booth.supportMode {
-                    HStack(spacing: 10) {
+                    Button {
+                        booth.locked = false
+                    } label: {
+                        Label("Support", systemImage: "wrench.and.screwdriver")
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 14).padding(.vertical, 9)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .background(.ultraThinMaterial, in: Capsule())
+                } else {
+                    HStack(spacing: 9) {
+                        ForEach(0..<3, id: \.self) { i in
+                            Circle()
+                                .fill(i < cornerTaps ? Color.white : Color.white.opacity(0.28))
+                                .frame(width: 11, height: 11)
+                        }
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 12)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .opacity(cornerTaps > 0 ? 1 : 0)
+                    .frame(width: 170, height: 100, alignment: .topLeading)
+                    .contentShape(Rectangle())
+                    .onTapGesture { cornerTap() }
+                    .animation(.easeOut(duration: 0.15), value: cornerTaps)
+                }
+
+                Spacer()
+
+                if booth.supportMode {
+                    HStack(spacing: 12) {
                         light(arm.connected, "Arm")
                         light(rail.connected, "Rail")
+                        Text(programName)
                         if recorder.isRunning { Text(recorder.status) }
                     }
-                    .font(.caption)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .padding(.horizontal, 14).padding(.vertical, 9)
+                    .background(.ultraThinMaterial, in: Capsule())
                 }
             }
-            .foregroundStyle(.white.opacity(0.9))
-            .padding(.horizontal, 14).padding(.vertical, 10)
-            .background(.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 12))
+
+            // Branding goes here. A plain wordmark until it does.
+            Text("PIVOT")
+                .font(Brand.condensedBlack(size: 30))
+                .tracking(6)
+                .foregroundStyle(.white.opacity(0.92))
+                .shadow(color: .black.opacity(0.4), radius: 6, y: 2)
+                .allowsHitTesting(false)
         }
     }
 
@@ -145,38 +159,53 @@ struct BoothView: View {
         switch flow.phase {
         case .countdown(let n):
             Text("\(n)")
-                .font(.system(size: 240, weight: .black))
+                .font(.system(size: 280, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
                 .contentTransition(.numericText(countsDown: true))
-                .shadow(radius: 24)
+                .shadow(color: .black.opacity(0.5), radius: 30)
+                .id(n)
+                .transition(.scale(scale: 1.3).combined(with: .opacity))
         case .armed:
             Text("Get ready…")
-                .font(.system(size: 52, weight: .bold))
+                .font(.system(size: 56, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
-                .shadow(radius: 12)
+                .shadow(color: .black.opacity(0.5), radius: 16)
         case .recording:
-            Label("Recording", systemImage: "record.circle.fill")
-                .font(.system(size: 40, weight: .bold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 28).padding(.vertical, 14)
-                .background(Brand.red, in: Capsule())
-        case .rendering:
-            VStack(spacing: 16) {
-                ProgressView().controlSize(.large).tint(.white)
-                Text("Building your clip…")
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-            }
-            .padding(30)
-            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 20))
-        case .failed(let why):
-            VStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 44))
-                Text(why).font(.title3).multilineTextAlignment(.center)
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(Brand.redHi)
+                    .frame(width: 16, height: 16)
+                    .opacity(pulse ? 0.35 : 1)
+                    .animation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true), value: pulse)
+                    .onAppear { pulse = true }
+                    .onDisappear { pulse = false }
+                Text("Recording")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
             }
             .foregroundStyle(.white)
-            .padding(30)
-            .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 20))
+            .padding(.horizontal, 24).padding(.vertical, 12)
+            .background(.ultraThinMaterial, in: Capsule())
+            .frame(maxHeight: .infinity, alignment: .top)
+        case .rendering:
+            VStack(spacing: 18) {
+                ProgressView().controlSize(.large).tint(.white)
+                Text("Building your clip…")
+                    .font(.system(size: 26, weight: .semibold, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 40).padding(.vertical, 32)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        case .failed(let why):
+            VStack(spacing: 14) {
+                Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 40))
+                Text(why)
+                    .font(.system(size: 22, weight: .medium, design: .rounded))
+                    .multilineTextAlignment(.center)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 40).padding(.vertical, 30)
+            .frame(maxWidth: 640)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         case .idle, .done:
             EmptyView()
         }
@@ -191,40 +220,57 @@ struct BoothView: View {
                 flow.stop()
             } label: {
                 Text("STOP")
-                    .font(.system(size: 20, weight: .black))
-                    .frame(width: 110, height: 52)
+                    .font(.system(size: 18, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(width: 104, height: 50)
+                    .background(Brand.red, in: Capsule())
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.red)
-            .opacity(flow.phase.isBusy || runner.running ? 1 : 0.4)
+            .buttonStyle(PressStyle())
+            .opacity(flow.phase.isBusy || runner.running ? 1 : 0.35)
 
             Spacer()
 
             switch flow.phase {
             case .idle:
-                VStack(spacing: 10) {
+                VStack(spacing: 14) {
                     if let b = flow.blocker {
-                        Text(b)
+                        Label(b, systemImage: "exclamationmark.circle.fill")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.orange)
-                            .padding(.horizontal, 14).padding(.vertical, 7)
-                            .background(.black.opacity(0.55), in: Capsule())
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(.ultraThinMaterial, in: Capsule())
+                    } else {
+                        Text("Step in, then tap")
+                            .font(.system(size: 17, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.85))
                     }
                     Button {
                         Haptics.heavy()
                         flow.capture()
                     } label: {
                         Label("CAPTURE", systemImage: "camera.fill")
-                            .font(.system(size: 36, weight: .black))
-                            .frame(width: 360, height: 96)
+                            .font(.system(size: 34, weight: .black, design: .rounded))
+                            .foregroundStyle(.black)
+                            .frame(width: 380, height: 96)
+                            .background(
+                                LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.78)],
+                                               startPoint: .top, endPoint: .bottom),
+                                in: Capsule())
+                            .overlay(Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 1))
+                            .shadow(color: Color.accentColor.opacity(0.45), radius: 22, y: 8)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(PressStyle())
                     .disabled(flow.blocker != nil)
+                    .opacity(flow.blocker == nil ? 1 : 0.45)
                 }
             case .done, .failed:
-                VStack(spacing: 10) {
+                VStack(spacing: 12) {
                     if case .done = flow.phase {
-                        Text("Saved to Photos").font(.headline).foregroundStyle(.white)
+                        Label("Saved to Photos", systemImage: "checkmark.circle.fill")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(.ultraThinMaterial, in: Capsule())
                     }
                     if let n = flow.note {
                         Text(n).font(.caption).foregroundStyle(.orange)
@@ -233,27 +279,30 @@ struct BoothView: View {
                         next()
                     } label: {
                         Text("NEXT")
-                            .font(.system(size: 28, weight: .black))
-                            .frame(width: 260, height: 72)
+                            .font(.system(size: 28, weight: .black, design: .rounded))
+                            .foregroundStyle(.black)
+                            .frame(width: 280, height: 74)
+                            .background(Color.accentColor, in: Capsule())
+                            .shadow(color: Color.accentColor.opacity(0.4), radius: 18, y: 6)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(PressStyle())
                 }
             default:
                 Text(runner.status)
-                    .font(.subheadline)
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.9))
-                    .padding(.horizontal, 14).padding(.vertical, 7)
-                    .background(.black.opacity(0.45), in: Capsule())
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background(.ultraThinMaterial, in: Capsule())
             }
 
             Spacer()
-            Color.clear.frame(width: 110, height: 52)
+            Color.clear.frame(width: 104, height: 50)
         }
     }
 
     private func light(_ on: Bool, _ label: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(on ? Color.green : Color.red).frame(width: 9, height: 9)
+        HStack(spacing: 5) {
+            Circle().fill(on ? Color.green : Color.red).frame(width: 8, height: 8)
             Text(label)
         }
     }
@@ -289,6 +338,15 @@ struct BoothView: View {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             if !Task.isCancelled { cornerTaps = 0 }
         }
+    }
+}
+
+/// Shrinks a little while pressed, so a big button feels like one.
+struct PressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
