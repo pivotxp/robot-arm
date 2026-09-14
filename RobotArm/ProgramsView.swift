@@ -10,7 +10,10 @@ struct ProgramsView: View {
     @ObservedObject private var arm = ArmLink.shared
     @ObservedObject private var rail = RailLink.shared
     @ObservedObject private var runner = Runner.shared
+    @ObservedObject private var booth = Booth.shared
     @State private var showTemplate = false
+    @State private var showPINChange = false
+    @State private var newPIN = ""
     @State private var showNew = false
     @State private var newCode = 39
     @State private var showEmptyCodes = false
@@ -30,6 +33,32 @@ struct ProgramsView: View {
                 Text("Programs · \(store.programs.count) of \(RailCatalog.codes.count) codes")
             } footer: {
                 Text("A code is one number the rail's control box understands, 0–63. Rail moves are stored at codes 1–15 and 17–38; every code can carry arm steps.")
+            }
+
+            Section {
+                Picker("Capture runs", selection: $booth.program) {
+                    Text("Nothing chosen").tag(Int?.none)
+                    ForEach(store.programs) { p in
+                        Text("\(p.number) · \(p.name)").tag(Optional(p.number))
+                    }
+                }
+                Stepper("Countdown: \(booth.countdown == 0 ? "none" : "\(booth.countdown) s")", value: $booth.countdown, in: 0...10)
+                Toggle("Support mode — open the app without the PIN", isOn: $booth.supportMode)
+                Button {
+                    newPIN = ""
+                    showPINChange = true
+                } label: {
+                    Label(booth.pinIsDefault ? "Set the crew PIN (still the default)" : "Change the crew PIN", systemImage: "lock")
+                }
+                Button {
+                    booth.locked = true
+                } label: {
+                    Label("Go to the booth screen", systemImage: "camera.fill")
+                }
+            } header: {
+                Text("Booth")
+            } footer: {
+                Text("The booth screen is one CAPTURE button: it counts down, records the guest on this iPad's camera while the program runs, builds the clip with the video template and saves it to Photos. With Support mode off the app opens on that screen and leaving it takes three taps in the top-left corner plus the PIN. With it on, the app opens here and the booth screen has a Support button.")
             }
 
             Section {
@@ -111,6 +140,13 @@ struct ProgramsView: View {
                     Label("Video template", systemImage: "film")
                 }
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    booth.locked = true
+                } label: {
+                    Label("Booth", systemImage: "camera.fill")
+                }
+            }
         }
         .sheet(isPresented: $showTemplate) {
             NavigationStack {
@@ -136,6 +172,14 @@ struct ProgramsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Which code? Free codes: \(freeCodes.prefix(12).map(String.init).joined(separator: ", "))\(freeCodes.count > 12 ? "…" : "").")
+        }
+        .alert("Crew PIN", isPresented: $showPINChange) {
+            TextField("4 digits or more", text: $newPIN)
+                .keyboardType(.numberPad)
+            Button("Save") { booth.setPIN(newPIN) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Needed to leave the booth screen when Support mode is off. Digits only, at least four.")
         }
         .alert("Test the wires", isPresented: $showMeasure) {
             TextField("Rail program", value: $measureCode, format: .number.grouping(.never))

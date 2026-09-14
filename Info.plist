@@ -12,6 +12,10 @@
 	</dict>
 	<!-- Show the app's Documents folder (the program files) in the Files app, so a program can
 	     also be edited as plain text if you ever want to. -->
+	<key>NSCameraUsageDescription</key>
+	<string>The booth screen records the guest on this iPad's camera while the rig runs.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Finished clips are saved to Photos.</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>

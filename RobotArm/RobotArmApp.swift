@@ -6,14 +6,22 @@ struct RobotArmApp: App {
     @StateObject private var rail = RailLink.shared
     @StateObject private var runner = Runner.shared
     @StateObject private var store = ProgramStore.shared
+    @StateObject private var booth = Booth.shared
 
     var body: some Scene {
         WindowGroup {
-            VStack(spacing: 0) {
-                StatusStrip()
-                Divider()
-                NavigationStack {
-                    ProgramsView()
+            Group {
+                if booth.locked {
+                    // The booth screen: one button. The way out is the PIN, or Support mode.
+                    BoothView()
+                } else {
+                    VStack(spacing: 0) {
+                        StatusStrip()
+                        Divider()
+                        NavigationStack {
+                            ProgramsView()
+                        }
+                    }
                 }
             }
             .task {
