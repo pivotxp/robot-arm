@@ -123,16 +123,32 @@ struct BoothView: View {
         ZStack {
             HStack(alignment: .top) {
                 if booth.supportMode {
-                    Button {
-                        booth.locked = false
-                    } label: {
-                        Label("Support", systemImage: "wrench.and.screwdriver")
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 14).padding(.vertical, 9)
+                    HStack(spacing: 10) {
+                        Button {
+                            booth.locked = false
+                        } label: {
+                            Label("Support", systemImage: "wrench.and.screwdriver")
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 14).padding(.vertical, 9)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.white)
+                        .background(.ultraThinMaterial, in: Capsule())
+
+                        // 🔑 The camera, switchable from the booth itself. Testing a Canon capture
+                        // and then an iPad one meant leaving the booth, finding the picker under
+                        // Programs, coming back — for one choice. Support crew only.
+                        Picker("Camera", selection: $booth.camera) {
+                            Text("Canon").tag("canon")
+                            Text("Back").tag("back")
+                            Text("Front").tag("front")
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 230)
+                        .padding(6)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .onChange(of: booth.camera) { _, _ in Task { await Recorder.shared.restart() } }
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white)
-                    .background(.ultraThinMaterial, in: Capsule())
                 } else {
                     HStack(spacing: 9) {
                         ForEach(0..<3, id: \.self) { i in

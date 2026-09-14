@@ -51,6 +51,17 @@ struct StatusStrip: View {
             light(on: arm.connected, label: "Arm", detail: armDetail)
             light(on: rail.connected, label: "Rail", detail: railDetail)
             light(on: canon.isReady, label: "Canon", detail: canon.label)
+            // 🔑 On the strip, so it is on every settings screen — the toolbar's Booth button
+            // vanishes the moment a program editor is pushed, which is exactly where you are
+            // when you want to go test the capture you just changed.
+            Button {
+                Booth.shared.locked = true
+            } label: {
+                Label("Back to booth", systemImage: "camera.fill")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
+            .tint(Brand.ink)
             Spacer()
             Text(runner.status)
                 .font(.title3)

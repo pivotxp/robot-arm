@@ -49,10 +49,11 @@ struct ProgramsView: View {
                 }
                 Stepper("Countdown: \(booth.countdown == 0 ? "none" : "\(booth.countdown) s")", value: $booth.countdown, in: 0...10)
                 Picker("Camera", selection: $booth.camera) {
-                    Text("Canon on the arm").tag("canon")
-                    Text("iPad back (faces away from the screen)").tag("back")
-                    Text("iPad front (faces the screen)").tag("front")
+                    Text("Canon").tag("canon")
+                    Text("iPad back").tag("back")
+                    Text("iPad front").tag("front")
                 }
+                .pickerStyle(.segmented)
                 .onChange(of: booth.camera) { _, _ in Task { await Recorder.shared.restart() } }
                 Toggle("Support mode — open the app without the PIN", isOn: $booth.supportMode)
                 Button {

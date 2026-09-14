@@ -53,7 +53,9 @@ final class Booth: ObservableObject {
 
     private init() {
         supportMode = d.bool(forKey: "booth.support")
-        program = d.object(forKey: "booth.program") as? Int
+        // 14 is the move the booth is being built around. A capture that says "no program
+        // chosen" on a fresh install is a dead button for no reason.
+        program = d.object(forKey: "booth.program") as? Int ?? 14
         countdown = d.object(forKey: "booth.countdown") as? Int ?? 3
         camera = d.string(forKey: "booth.camera") ?? "back"
         tail = d.object(forKey: "booth.tail") as? Double ?? 1.0
