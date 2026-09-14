@@ -91,6 +91,7 @@ final class Recorder: NSObject, ObservableObject {
 
         session.beginConfiguration()
         session.sessionPreset = .inputPriority       // so the format chosen below is kept
+        session.automaticallyConfiguresCaptureDeviceForWideColor = false   // and so is SDR
         session.inputs.forEach { session.removeInput($0) }
         do {
             let input = try AVCaptureDeviceInput(device: cam)
@@ -129,14 +130,25 @@ final class Recorder: NSObject, ObservableObject {
         await start()
     }
 
-    /// Highest frame rate up to 120, and the largest frame at that rate.
+    /// Highest frame rate up to 120, at the SMALLEST frame that still fills the 1080p output.
+    ///
+    /// 🐞 **This used to take the LARGEST frame at 120 fps — 4K — and that was two of the three
+    /// complaints in one line.** The clip ships at 1920×1080, so 4K bought nothing but four times
+    /// the pixels through every export pass ("render faster"). And on this iPad the 4K/120 formats
+    /// are HDR: the pipeline composites them as if they were SDR, which is the "very washed" look.
+    /// 1080p/120 is SDR, a quarter of the work, and the output size anyway.
     private func pickFormat(_ cam: AVCaptureDevice) {
         let rates: [Double] = [120, 60, 30]
+        let targetW: Int32 = 1920
         for want in rates {
             let candidates = cam.formats.filter { f in
-                f.videoSupportedFrameRateRanges.contains { $0.maxFrameRate >= want - 0.5 }
+                let d = CMVideoFormatDescriptionGetDimensions(f.formatDescription)
+                return d.width >= targetW
+                    && f.videoSupportedFrameRateRanges.contains { $0.maxFrameRate >= want - 0.5 }
+                    // Only formats that can run in SDR. HDR-only formats wash out downstream.
+                    && f.supportedColorSpaces.contains(.sRGB)
             }
-            guard let best = candidates.max(by: { a, b in
+            guard let best = candidates.min(by: { a, b in
                 let da = CMVideoFormatDescriptionGetDimensions(a.formatDescription)
                 let db = CMVideoFormatDescriptionGetDimensions(b.formatDescription)
                 return Int(da.width) * Int(da.height) < Int(db.width) * Int(db.height)
@@ -144,13 +156,16 @@ final class Recorder: NSObject, ObservableObject {
             do {
                 try cam.lockForConfiguration()
                 cam.activeFormat = best
+                // Explicit SDR. Left alone, the session picks a wide/HDR colour space for any
+                // format that offers one, and the exporter then flattens it.
+                cam.activeColorSpace = .sRGB
                 let d = CMTime(value: 1, timescale: CMTimeScale(want))
                 cam.activeVideoMinFrameDuration = d
                 cam.activeVideoMaxFrameDuration = d
                 cam.unlockForConfiguration()
                 let dims = CMVideoFormatDescriptionGetDimensions(best.formatDescription)
                 fps = want
-                status = "\(dims.width)×\(dims.height) at \(Int(want)) fps"
+                status = "\(dims.width)×\(dims.height) at \(Int(want)) fps, SDR"
                 return
             } catch {
                 continue

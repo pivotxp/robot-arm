@@ -192,12 +192,16 @@ enum VideoProcessor {
         }
 
         let outURL = tempURL("pb-ts")
-        guard let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
+        // 🔑 This is an INTERMEDIATE. It feeds the 1080p overlay pass and is deleted. Encoding it
+        // at "highest quality, source size" meant a full-resolution re-encode whose extra pixels
+        // were thrown away one pass later — the single biggest cost in the render. 1080p here is
+        // the same pixels the output gets, and no network-optimise pass: nothing streams a temp file.
+        guard let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPreset1920x1080) else {
             throw VideoProcessorError.exportFailed("Could not create exporter")
         }
         export.outputURL = outURL
         export.outputFileType = .mp4
-        export.shouldOptimizeForNetworkUse = true
+        export.shouldOptimizeForNetworkUse = false
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
             export.exportAsynchronously { cont.resume() }
         }
@@ -240,7 +244,7 @@ enum VideoProcessor {
         export.outputURL = outURL
         export.outputFileType = .mp4
         export.videoComposition = videoComposition
-        export.shouldOptimizeForNetworkUse = true
+        export.shouldOptimizeForNetworkUse = false   // intermediate: the concat pass is the file that ships
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
             export.exportAsynchronously { cont.resume() }
         }
@@ -441,13 +445,16 @@ enum VideoProcessor {
             .appendingPathComponent("pb-\(suffix)-\(UUID().uuidString.prefix(8)).mp4")
         try? FileManager.default.removeItem(at: outputURL)
 
+        // Every clip arriving here is already a 1080p SDR MP4 from the normalise pass, so the
+        // final concat is a 1080p job too. "Highest quality" on a 1080p source is the same
+        // pixels with a slower encoder path.
         guard let exporter = AVAssetExportSession(asset: composition,
-                                                  presetName: AVAssetExportPresetHighestQuality) else {
+                                                  presetName: AVAssetExportPreset1920x1080) else {
             throw VideoProcessorError.exportFailed("Could not create exporter")
         }
         exporter.outputURL = outputURL
         exporter.outputFileType = .mp4
-        exporter.shouldOptimizeForNetworkUse = true
+        exporter.shouldOptimizeForNetworkUse = true   // this one ships and gets AirDropped
         exporter.audioMix = audioMix
 
         await withCheckedContinuation { continuation in
