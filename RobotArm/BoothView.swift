@@ -16,6 +16,7 @@ struct BoothView: View {
     @ObservedObject private var store = ProgramStore.shared
     @ObservedObject private var arm = ArmLink.shared
     @ObservedObject private var rail = RailLink.shared
+    @ObservedObject private var canon = Canon.shared
 
     @State private var cornerTaps = 0
     @State private var cornerReset: Task<Void, Never>?
@@ -84,6 +85,19 @@ struct BoothView: View {
         if case .done = flow.phase, let player {
             VideoPlayer(player: player)
                 .ignoresSafeArea()
+        } else if booth.usesCanon {
+            if let img = canon.previewImage {
+                Image(uiImage: img)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .ignoresSafeArea()
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "camera.badge.ellipsis").font(.system(size: 44))
+                    Text(canon.label).font(.title3)
+                }
+                .foregroundStyle(.white.opacity(0.7))
+            }
         } else if recorder.isRunning {
             CameraPreview(session: recorder.session)
                 .ignoresSafeArea()
@@ -134,6 +148,7 @@ struct BoothView: View {
                     HStack(spacing: 12) {
                         light(arm.connected, "Arm")
                         light(rail.connected, "Rail")
+                        light(canon.isReady, "Canon")
                         Text(programName)
                         if recorder.isRunning { Text(recorder.status) }
                     }

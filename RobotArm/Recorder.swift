@@ -23,8 +23,7 @@ final class Recorder: NSObject, ObservableObject {
 
     /// Which side of the iPad faces the guest. Stored so it survives a relaunch.
     var facing: AVCaptureDevice.Position {
-        get { UserDefaults.standard.string(forKey: "booth.camera") == "front" ? .front : .back }
-        set { UserDefaults.standard.set(newValue == .front ? "front" : "back", forKey: "booth.camera") }
+        UserDefaults.standard.string(forKey: "booth.camera") == "front" ? .front : .back
     }
 
     /// Ask for camera access during setup, not on the booth screen in front of a guest.
@@ -77,9 +76,8 @@ final class Recorder: NSObject, ObservableObject {
         status = "Camera stopped"
     }
 
-    /// Switch between the front and back camera.
-    func flip() async {
-        facing = facing == .front ? .back : .front
+    /// Re-open with whatever camera is now chosen.
+    func restart() async {
         stop()
         await start()
     }

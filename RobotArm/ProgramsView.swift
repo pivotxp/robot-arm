@@ -11,6 +11,7 @@ struct ProgramsView: View {
     @ObservedObject private var rail = RailLink.shared
     @ObservedObject private var runner = Runner.shared
     @ObservedObject private var booth = Booth.shared
+    @ObservedObject private var canon = Canon.shared
     @State private var showTemplate = false
     @State private var showPINChange = false
     @State private var confirmTemplate = false
@@ -44,12 +45,12 @@ struct ProgramsView: View {
                     }
                 }
                 Stepper("Countdown: \(booth.countdown == 0 ? "none" : "\(booth.countdown) s")", value: $booth.countdown, in: 0...10)
-                Picker("Camera", selection: Binding(
-                    get: { Recorder.shared.facing == .front ? "front" : "back" },
-                    set: { Recorder.shared.facing = $0 == "front" ? .front : .back })) {
-                    Text("Back (faces away from the screen)").tag("back")
-                    Text("Front (faces the screen)").tag("front")
+                Picker("Camera", selection: $booth.camera) {
+                    Text("Canon on the arm").tag("canon")
+                    Text("iPad back (faces away from the screen)").tag("back")
+                    Text("iPad front (faces the screen)").tag("front")
                 }
+                .onChange(of: booth.camera) { _, _ in Task { await Recorder.shared.restart() } }
                 Toggle("Support mode — open the app without the PIN", isOn: $booth.supportMode)
                 Button {
                     newPIN = ""
@@ -76,6 +77,22 @@ struct ProgramsView: View {
                 Text("Booth")
             } footer: {
                 Text("The booth screen is one CAPTURE button: it counts down, records the guest on this iPad's camera while the program runs, builds the clip with the video template and saves it to Photos. With Support mode off the app opens on that screen and leaving it takes three taps in the top-left corner plus the PIN. With it on, the app opens here and the booth screen has a Support button.")
+            }
+
+            Section {
+                LabeledContent("Canon", value: canon.label)
+                if !canon.lastSearch.isEmpty, !canon.isReady {
+                    Text(canon.lastSearch).font(.footnote).foregroundStyle(.secondary)
+                }
+                Button {
+                    canon.searchAgain()
+                } label: {
+                    Label("Look for the Canon again", systemImage: "camera.badge.ellipsis")
+                }
+            } header: {
+                Text("Camera")
+            } footer: {
+                Text("The app looks for the Canon on its own, every few seconds, as soon as it is plugged into the hub (it appears at 192.0.0.1) or on the same Wi-Fi. CCAPI has to be enabled on the camera, and over the cable the camera's USB setting has to be the smartphone / Camera Connect mode.")
             }
 
             Section {

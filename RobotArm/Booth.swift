@@ -26,6 +26,11 @@ final class Booth: ObservableObject {
     /// Seconds of 3-2-1 before the rig moves. 0 = none.
     @Published var countdown: Int { didSet { d.set(countdown, forKey: "booth.countdown") } }
 
+    /// "canon", "back" or "front". The Canon records on the camera and the file is pulled over;
+    /// the other two are this iPad's cameras.
+    @Published var camera: String { didSet { d.set(camera, forKey: "booth.camera") } }
+    var usesCanon: Bool { camera == "canon" }
+
     /// Record this long after the rig reports done, so the last frames are never cut.
     @Published var tail: Double { didSet { d.set(tail, forKey: "booth.tail") } }
 
@@ -50,6 +55,7 @@ final class Booth: ObservableObject {
         supportMode = d.bool(forKey: "booth.support")
         program = d.object(forKey: "booth.program") as? Int
         countdown = d.object(forKey: "booth.countdown") as? Int ?? 3
+        camera = d.string(forKey: "booth.camera") ?? "back"
         tail = d.object(forKey: "booth.tail") as? Double ?? 1.0
         // Guests first, crew only when asked.
         locked = !d.bool(forKey: "booth.support")
@@ -86,13 +92,24 @@ final class CaptureFlow: ObservableObject {
         }
     }
 
-    @Published private(set) var phase: Phase = .idle
+    @Published private(set) var phase: Phase = .idle {
+        didSet {
+            switch phase {
+            case .done(let u): Log.write("capture: done — \(u.lastPathComponent)")
+            case .failed(let why): Log.write("capture: FAILED — \(why)")
+            case .rendering: Log.write("capture: rendering")
+            case .recording: Log.write("capture: recording")
+            default: break
+            }
+        }
+    }
     /// Something that went wrong without stopping the capture — shown small on the done screen.
     @Published private(set) var note: String?
 
     private let booth = Booth.shared
     private let runner = Runner.shared
     private let recorder = Recorder.shared
+    private let canon = Canon.shared
     private let store = ProgramStore.shared
     private let arm = ArmLink.shared
     private let rail = RailLink.shared
@@ -103,6 +120,7 @@ final class CaptureFlow: ObservableObject {
         guard let n = booth.program else { return "No program chosen — Programs → Booth" }
         guard let p = store.program(n) else { return "Program \(n) no longer exists — Programs → Booth" }
         if !arm.connected { return "Arm is not connected" }
+        if booth.usesCanon, !canon.isReady { return "Canon is not connected — \(canon.label)" }
         if p.railProgram != nil {
             if !rail.connected { return "Rail is not connected" }
             if rail.homed != "1" { return "Rail is not referenced — Programs → Home the rail" }
@@ -128,7 +146,10 @@ final class CaptureFlow: ObservableObject {
         task?.cancel()
         task = nil
         runner.stop()
-        Task { @MainActor in _ = await recorder.stopRecording() }
+        Task { @MainActor in
+            _ = await recorder.stopRecording()
+            if canon.recording { _ = try? await canon.stopMovie() }
+        }
         phase = .failed("Stopped")
     }
 
@@ -143,7 +164,8 @@ final class CaptureFlow: ObservableObject {
             }
         }
 
-        let filming = recorder.isRunning
+        let onCanon = booth.usesCanon && canon.isReady
+        let filming = onCanon || recorder.isRunning
         if !filming { note = "No camera — the rig ran but nothing was recorded." }
 
         // Fire the rig, then start the camera the moment the arm goes — after the rail's cue.
@@ -161,7 +183,14 @@ final class CaptureFlow: ObservableObject {
             phase = .failed(runner.status)
             return
         }
-        if filming { recorder.startRecording() }
+        if onCanon {
+            do { try await canon.startMovie() } catch {
+                Log.write("capture: Canon would not start recording — \(error.localizedDescription)")
+                note = "Canon would not record: \(error.localizedDescription)"
+            }
+        } else if filming {
+            recorder.startRecording()
+        }
         let recordingStarted = Date()
         phase = .recording
 
@@ -186,9 +215,18 @@ final class CaptureFlow: ObservableObject {
             phase = rigResult.hasPrefix("Done") ? .failed("The rig ran, but there is no camera to record with.") : .failed(rigResult)
             return
         }
-        guard let raw = await recorder.stopRecording() else {
-            phase = .failed("The camera did not save the recording.")
-            return
+        let raw: URL
+        if onCanon {
+            do { raw = try await canon.stopMovie() } catch {
+                phase = .failed("Could not get the movie from the Canon: \(error.localizedDescription)")
+                return
+            }
+        } else {
+            guard let u = await recorder.stopRecording() else {
+                phase = .failed("The camera did not save the recording.")
+                return
+            }
+            raw = u
         }
         Log.write("capture: recorded \(raw.lastPathComponent)")
 

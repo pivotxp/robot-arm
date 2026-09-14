@@ -29,6 +29,7 @@ struct RobotArmApp: App {
                 BoothTemplate.applyIfFresh()
                 arm.startAutoConnect()
                 rail.startAutoConnect()
+                Canon.shared.start()
                 Log.write("launch — build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?")")
                 await runLaunchRequest()
             }
@@ -41,11 +42,13 @@ struct StatusStrip: View {
     @ObservedObject private var arm = ArmLink.shared
     @ObservedObject private var rail = RailLink.shared
     @ObservedObject private var runner = Runner.shared
+    @ObservedObject private var canon = Canon.shared
 
     var body: some View {
         HStack(spacing: 24) {
             light(on: arm.connected, label: "Arm", detail: armDetail)
             light(on: rail.connected, label: "Rail", detail: railDetail)
+            light(on: canon.isReady, label: "Canon", detail: canon.label)
             Spacer()
             Text(runner.status)
                 .font(.title3)
