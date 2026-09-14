@@ -116,6 +116,13 @@ final class Booth: ObservableObject {
             d.set(1.0, forKey: "booth.armSpeedScale")
             d.set(true, forKey: "booth.revert142")
         }
+        // The rail ramps slower than the arm, so give it a head start: fire the rail, then the arm
+        // ~0.4 s later so they move together (IMG_0237 showed the arm ahead). One-time default; the
+        // "Arm starts N s after the rail" slider fine-tunes it.
+        if !d.bool(forKey: "booth.railLeadV1") {
+            d.set(0.4, forKey: "booth.armSync")
+            d.set(true, forKey: "booth.railLeadV1")
+        }
         preRoll = d.object(forKey: "booth.preRoll") as? Double ?? -1.0
         armSync = d.object(forKey: "booth.armSync") as? Double ?? 0.0
         armSpeedScale = d.object(forKey: "booth.armSpeedScale") as? Double ?? 1.0
@@ -286,17 +293,13 @@ final class CaptureFlow: ObservableObject {
             _ = await railReady.value                 // make sure the rail is loaded before we pulse
             let sync = max(0, booth.armSync)
             if let n = program.railProgram {
-                _ = await rail.firePulse(n) { [weak self] in
-                    guard let self else { return }
-                    if sync <= 0 {
-                        self.goNow(program, onCanon: onCanon, filming: filming, driveArm: driveArm)
-                    } else {
-                        Task { @MainActor in
-                            try? await Task.sleep(nanoseconds: UInt64(sync * 1_000_000_000))
-                            if !Task.isCancelled { self.goNow(program, onCanon: onCanon, filming: filming, driveArm: driveArm) }
-                        }
-                    }
-                }
+                // Fire the RAIL first and let it get going, THEN launch the arm `armSync` later. The
+                // heavy carriage ramps up slower than the snappy arm, so firing them at the same
+                // instant left the arm ahead and the rail lagging (IMG_0237). Giving the rail the
+                // head start lines them up. Tune "Arm starts N s after the rail".
+                _ = await rail.firePulse(n)
+                if sync > 0 { try? await Task.sleep(nanoseconds: UInt64(sync * 1_000_000_000)) }
+                self.goNow(program, onCanon: onCanon, filming: filming, driveArm: driveArm)
             } else {
                 self.goNow(program, onCanon: onCanon, filming: filming, driveArm: driveArm)
             }
