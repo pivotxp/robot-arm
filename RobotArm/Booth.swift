@@ -34,6 +34,10 @@ final class Booth: ObservableObject {
     /// Record this long after the rig reports done, so the last frames are never cut.
     @Published var tail: Double { didSet { d.set(tail, forKey: "booth.tail") } }
 
+    /// Seconds to fire the rig BEFORE the countdown ends, to cancel the rail's own mechanical
+    /// pre-move delay so the move lands on "1". 0 = fire exactly when the countdown finishes.
+    @Published var lead: Double { didSet { d.set(lead, forKey: "booth.lead") } }
+
     /// The crew PIN Kyle asked for. Changeable on the iPad under Booth; this is the value until
     /// one is set there.
     static let defaultPIN = "0485"
@@ -59,6 +63,7 @@ final class Booth: ObservableObject {
         countdown = d.object(forKey: "booth.countdown") as? Int ?? 3
         camera = d.string(forKey: "booth.camera") ?? "back"
         tail = d.object(forKey: "booth.tail") as? Double ?? 1.0
+        lead = d.object(forKey: "booth.lead") as? Double ?? 0
         // Guests first, crew only when asked.
         locked = !d.bool(forKey: "booth.support")
     }
@@ -161,24 +166,45 @@ final class CaptureFlow: ObservableObject {
 
     private func run(_ program: Program) async {
         Log.write("capture: “\(program.name)” (code \(program.number)) — camera \(booth.camera): \(booth.usesCanon ? canon.label : recorder.status)")
+
+        // 🔑 **The clog was doing all the setup AFTER the countdown.** Enabling the arm, firing the
+        // rail and waiting for the wire cue all ran once "1" had shown, so the guest watched a dead
+        // "Get ready…" for several seconds. Now the whole countdown IS the setup window:
+        //   • prewarm the arm (the slow first-run enable) the instant CAPTURE is pressed, and
+        //   • fire the rig `lead` seconds BEFORE the countdown ends, so the rail's own mechanical
+        //     pre-move delay is spent during 3-2-1 and the move lands on "1".
+        // `lead` is dial-able under Booth (0 = fire exactly at the end); the rig sets how much of
+        // its delay to hide, with no rebuild.
+        let onCanon = booth.usesCanon && canon.isReady
+        let filming = onCanon || recorder.isRunning
+        if !filming { note = "No camera — the rig ran but nothing was recorded." }
+
+        let prewarm = Task { await runner.prewarm() }
+
+        // Fire the rig on its own clock, `lead` seconds before the visible countdown finishes.
+        let countdownSecs = Double(booth.countdown)
+        let lead = min(booth.lead, countdownSecs)      // never fire before the countdown starts
+        let fireTask = Task { @MainActor in
+            let waitBeforeFiring = max(0, countdownSecs - lead)
+            try? await Task.sleep(nanoseconds: UInt64(waitBeforeFiring * 1_000_000_000))
+            if Task.isCancelled { return }
+            _ = await prewarm.value          // make sure the arm is enabled before the trigger
+            runner.run(program)
+        }
+
+        // The visible 3-2-1, independent of when the rig actually fires.
         if booth.countdown > 0 {
             for n in stride(from: booth.countdown, through: 1, by: -1) {
                 phase = .countdown(n)
                 Haptics.light()
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
-                if Task.isCancelled { return }
+                if Task.isCancelled { fireTask.cancel(); return }
             }
         }
+        _ = await fireTask.value             // rig has now been fired (or already was, mid-countdown)
 
-        let onCanon = booth.usesCanon && canon.isReady
-        let filming = onCanon || recorder.isRunning
-        if !filming { note = "No camera — the rig ran but nothing was recorded." }
-
-        // Fire the rig, then start the camera the moment the arm goes — after the rail's cue.
-        // The video template slices the first seconds of the recording, so those seconds have
-        // to be the move, not the wait for the wires (which can be several seconds).
+        // The move is underway or about to be — the camera starts the instant the arm goes.
         phase = .armed
-        runner.run(program)
         let fired = Date()
         while runner.running, !runner.motionStarted, Date().timeIntervalSince(fired) < 30, !Task.isCancelled {
             try? await Task.sleep(nanoseconds: 50_000_000)

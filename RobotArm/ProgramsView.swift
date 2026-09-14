@@ -48,6 +48,13 @@ struct ProgramsView: View {
                     }
                 }
                 Stepper("Countdown: \(booth.countdown == 0 ? "none" : "\(booth.countdown) s")", value: $booth.countdown, in: 0...10)
+                VStack(alignment: .leading) {
+                    Text("Fire the rig \(booth.lead == 0 ? "when the countdown ends" : "\(Fmt.num(booth.lead)) s before the countdown ends")")
+                        .font(.subheadline)
+                    Slider(value: $booth.lead, in: 0...Double(max(1, booth.countdown)), step: 0.5)
+                    Text("Raise this until the arm and rail start right on “1” — it hides the rail's own delay inside the 3-2-1.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Picker("Camera", selection: $booth.camera) {
                     Text("Canon").tag("canon")
                     Text("iPad back").tag("back")

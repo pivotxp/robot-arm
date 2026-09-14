@@ -295,6 +295,12 @@ final class Runner: ObservableObject {
 
     /// Full enable + tool setup the first time on a connection (or after a stop / fault);
     /// otherwise just confirm the arm is ready. Returns a reason if it is not.
+    /// Enable the arm and set its tool params ahead of a run, so the slow first-run cost happens
+    /// DURING the countdown instead of after it. Cached by connection generation, so calling this
+    /// and then `run()` does the work once. Returns a reason string if the arm could not be readied.
+    @discardableResult
+    func prewarm() async -> String? { await prepareArm() }
+
     private func prepareArm() async -> String? {
         let st = await arm.getState() ?? 0
         let err = await arm.getError() ?? 0
