@@ -25,7 +25,7 @@ struct ProgramEditorView: View {
     var body: some View {
         let current = program.wrappedValue
         Form {
-            Section("Program") {
+            Section {
                 LabeledContent("Name") {
                     TextField("Name", text: program.name)
                         .multilineTextAlignment(.trailing)
@@ -36,7 +36,19 @@ struct ProgramEditorView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 100)
                 }
-                LabeledContent("Extra seconds the arm waits after the rail signals it (0 = none)") {
+                if let r = current.railProgram, !RailCatalog.hasMove(r) {
+                    Text("The rail's control box has no move stored at \(r) (it has 1–15 and 17–38). The arm will run; the carriage will not.")
+                        .font(.subheadline).foregroundStyle(.orange)
+                }
+                if current.railProgram != nil {
+                    Picker("Arm starts", selection: program.armStart) {
+                        ForEach(ArmStart.allCases) { Text($0.label).tag($0) }
+                    }
+                    .pickerStyle(.menu)
+                }
+                LabeledContent(current.railProgram != nil && current.armStart == .signal
+                               ? "Extra seconds after the signal (0 = none)"
+                               : "Extra seconds after the trigger (0 = none)") {
                     TextField("0", value: program.armDelay, format: .number.grouping(.never))
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
@@ -44,6 +56,14 @@ struct ProgramEditorView: View {
                 }
                 if !current.note.isEmpty {
                     Text(current.note).font(.subheadline).foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Program")
+            } footer: {
+                if current.railProgram != nil {
+                    Text(current.armStart == .signal
+                         ? "The control box raises the program number on six wires into the arm's inputs CI1–CI6; the arm goes the moment it sees its number — the same cue the original arm program used. If no signal arrives within 15 s the arm starts anyway and the status line says so."
+                         : "The arm starts on a stopwatch from the moment the rail is fired. Use this only if the six wires are not connected.")
                 }
             }
 

@@ -9,9 +9,12 @@ The rig has two machines:
   The rail's movements are stored inside its own control box as numbered programs. The app
   starts them by number; it does not edit the rail's path.
 
-Each **program** in the app is: a rail program number to start, how long the arm waits after the
-rail starts, and a list of **steps** for the arm. The 39 factory programs (0 to 38) are the ones
-that were on the arm when this app was made.
+Each **program** in the app is: a rail program number to start, what starts the arm, and a list
+of **steps** for the arm. A program lives at a **code** — one number the rail's control box
+understands, 0 to 63. The 39 factory programs (codes 0 to 38) are the ones that were on the arm
+when this app was made. The rail has moves stored at codes 1–15 and 17–38 (found by running every
+number on the real rail); code 0 is its home; every other code is empty on the rail, so a program
+you add there moves the arm only. **New program** (⋯ menu) puts a program at any free code.
 
 ## One-time iPad setup
 
@@ -42,10 +45,15 @@ The top strip is always there:
 
 **Program screen**:
 - *Rail program to start*: which of the rail's stored moves to fire. Blank = don't touch the rail.
-- *Extra seconds the arm waits after the rail signals it*: normally 0. When the rail's program
-  starts, the rail's control box signals the arm over six wires at the moment the arm should go,
-  and the app waits for that signal (up to 20 s) so the two stay in step. This number adds an
-  extra delay on top of that if you want one.
+- *Arm starts*: **When the rail signals** (the default) — the rail's control box raises the
+  program number on six wires into the arm's inputs CI1–CI6, and the arm goes the moment it sees
+  its number, exactly as the original arm program did. The app watches the wires from before the
+  trigger and waits up to 15 s; if no signal comes, the arm starts anyway and the status line
+  says "no signal on the wires". **On a timer** — the arm starts straight after the trigger; only
+  for when the wires are not connected.
+- *Extra seconds*: normally 0. Added after the signal (or the trigger).
+- *⋯ → Test the wires*: fires a rail program with the arm standing still and reports whether the
+  control box signalled that number and how long after the trigger. Do this once on a new rig.
 - *Steps, in order*: the arm does these one after another. Tap a step to change it, swipe left to
   delete, **Edit** to drag them into a new order, **Add a step** to add one.
 - *Reset this program to factory*: puts back the original version of this one program.

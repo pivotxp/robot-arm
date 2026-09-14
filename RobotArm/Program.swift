@@ -101,25 +101,85 @@ struct Step: Codable, Identifiable, Equatable {
     }
 }
 
+/// What tells the arm to go, once the rail program has been fired.
+enum ArmStart: String, Codable, CaseIterable, Identifiable {
+    /// When the rail's control box raises the program number on the six wires into the arm's
+    /// inputs CI1–CI6. This is the cue the original arm program used, so it is the default.
+    case signal
+    /// A stopwatch from the moment the rail was fired. For when the wires are not connected.
+    case timer
+
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .signal: return "When the rail signals (six wires)"
+        case .timer:  return "On a timer from the trigger"
+        }
+    }
+}
+
 /// One program: the arm steps plus which rail program to fire.
 struct Program: Codable, Identifiable, Equatable {
     var number: Int
     var name: String
     /// Which of the rail's stored programs to start when this runs. nil = leave the rail alone.
     var railProgram: Int?
-    /// Seconds the arm waits after the rail is started before its first move.
+    /// What starts the arm after the rail is fired. Only matters when `railProgram` is set.
+    var armStart: ArmStart = .signal
+    /// Extra seconds the arm waits after its start cue before its first move.
     var armDelay: Double = 0
     var note: String = ""
     var steps: [Step] = []
 
     var id: Int { number }
 
+    private enum CodingKeys: String, CodingKey { case number, name, railProgram, armStart, armDelay, note, steps }
+
+    init(number: Int, name: String, railProgram: Int? = nil, armStart: ArmStart = .signal,
+         armDelay: Double = 0, note: String = "", steps: [Step] = []) {
+        self.number = number; self.name = name; self.railProgram = railProgram
+        self.armStart = armStart; self.armDelay = armDelay; self.note = note; self.steps = steps
+    }
+
+    /// Files written before `armStart` existed decode as "signal", which is what they did on the
+    /// original rig — the arm program waited for the wires.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        number = try c.decode(Int.self, forKey: .number)
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? "Program \(number)"
+        railProgram = try c.decodeIfPresent(Int.self, forKey: .railProgram)
+        armStart = try c.decodeIfPresent(ArmStart.self, forKey: .armStart) ?? .signal
+        armDelay = try c.decodeIfPresent(Double.self, forKey: .armDelay) ?? 0
+        note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
+        steps = try c.decodeIfPresent([Step].self, forKey: .steps) ?? []
+    }
+
     var subtitle: String {
         var parts = ["\(steps.count) step\(steps.count == 1 ? "" : "s")"]
-        if let r = railProgram { parts.append("rail \(r)") } else { parts.append("no rail") }
-        if armDelay > 0 { parts.append("arm waits \(Fmt.num(armDelay)) s") }
+        if let r = railProgram {
+            parts.append(RailCatalog.hasMove(r) ? "rail \(r)" : "rail \(r) (no move stored)")
+            parts.append(armStart == .signal ? "on signal" : "on timer")
+        } else {
+            parts.append("no rail")
+        }
+        if armDelay > 0 { parts.append("+\(Fmt.num(armDelay)) s") }
         return parts.joined(separator: " · ")
     }
+}
+
+/// What the rail's control box actually has stored, code by code.
+///
+/// The Siemens accepts any ProgramNumber 0–63, but only some of those slots hold a movement.
+/// This list comes from running every number on the real rail on 2026-09-10 and watching
+/// whether the carriage moved: 37 codes moved it, code 16 did not, nothing above 38 did. Code 0
+/// is the rail's own home / stop. It is a fact about the machine as delivered — if the
+/// manufacturer adds programs in TIA Portal, update it.
+enum RailCatalog {
+    static let codes: ClosedRange<Int> = 0...63
+    /// Codes the rail acts on. 0 is its home / stop, which is an action even if not a "move".
+    static let withMove: Set<Int> = Set([0]).union(Set(1...15)).union(Set(17...38))
+
+    static func hasMove(_ code: Int) -> Bool { withMove.contains(code) }
 }
 
 struct FactoryFile: Codable {

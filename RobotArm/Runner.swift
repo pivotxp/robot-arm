@@ -13,6 +13,16 @@ final class Runner: ObservableObject {
     @Published private(set) var running = false
     @Published private(set) var status = "Ready"
 
+    /// The last time the rail's six-wire cue was seen: which program, and how long after the
+    /// trigger was sent (timed from the start of the rail conversation, since the cue can arrive
+    /// while the trigger's own writes are still going out). The rig's real sync figure —
+    /// measured, not assumed.
+    @Published private(set) var lastSignal: (program: Int, latency: Double, at: Date)?
+
+    /// How long to wait for the wires. The rail's longest start delay (program 6) is 9.4 s, and
+    /// the wires may come up as late as the movement does.
+    static let signalTimeout: Double = 15
+
     private var task: Task<Void, Never>?
 
     // What is bolted to the wrist, exactly as the factory export sets it.
@@ -26,7 +36,7 @@ final class Runner: ObservableObject {
 
     /// Run a whole program (rail + arm).
     func run(_ program: Program) {
-        start(name: program.name, railProgram: program.railProgram,
+        start(name: program.name, railProgram: program.railProgram, armStart: program.armStart,
               armDelay: program.armDelay, steps: program.steps)
     }
 
@@ -34,7 +44,35 @@ final class Runner: ObservableObject {
     func test(_ step: Step) {
         var s = step
         s.pauseAfter = 0
-        start(name: "test move", railProgram: nil, armDelay: 0, steps: [s])
+        start(name: "test move", railProgram: nil, armStart: .timer, armDelay: 0, steps: [s])
+    }
+
+    /// Fire a rail program on its own and watch the wires — no arm motion at all. This is how
+    /// to find out whether the control box signals a code, and how long after the trigger.
+    func measureSignal(railProgram n: Int) {
+        guard !running else { status = "Already running — press STOP first"; return }
+        guard rail.connected else { status = "Rail is not connected"; return }
+        guard arm.connected else { status = "Arm is not connected — its inputs are where the wires arrive"; return }
+        running = true
+        task = Task { @MainActor in
+            status = "Measuring the wires for rail program \(n)…"
+            let watcher = Task { await self.waitForSignal(n) }
+            guard await rail.runProgram(n) else {
+                watcher.cancel()
+                status = rail.lastError.isEmpty ? "Rail refused program \(n)" : rail.lastError
+                running = false
+                return
+            }
+            let seen = await watcher.value
+            if !Task.isCancelled {
+                if seen, let l = lastSignal, l.program == n {
+                    status = String(format: "Rail signalled program %d on the wires %.2f s after the trigger", n, l.latency)
+                } else {
+                    status = "No signal for program \(n) on the wires in \(Int(Self.signalTimeout)) s — check CI1–CI6"
+                }
+                running = false
+            }
+        }
     }
 
     /// STOP everything. Always allowed.
@@ -51,7 +89,7 @@ final class Runner: ObservableObject {
         }
     }
 
-    private func start(name: String, railProgram: Int?, armDelay: Double, steps: [Step]) {
+    private func start(name: String, railProgram: Int?, armStart: ArmStart, armDelay: Double, steps: [Step]) {
         guard !running else { status = "Already running — press STOP first"; return }
         guard arm.connected else { status = "Arm is not connected"; return }
         if railProgram != nil, !rail.connected { status = "Rail is not connected"; return }
@@ -59,7 +97,8 @@ final class Runner: ObservableObject {
 
         running = true
         task = Task { @MainActor in
-            let result = await execute(name: name, railProgram: railProgram, armDelay: armDelay, steps: steps)
+            let result = await execute(name: name, railProgram: railProgram, armStart: armStart,
+                                       armDelay: armDelay, steps: steps)
             if !Task.isCancelled {
                 status = result
                 running = false
@@ -68,19 +107,44 @@ final class Runner: ObservableObject {
     }
 
     /// Returns the final status text.
-    private func execute(name: String, railProgram: Int?, armDelay: Double, steps: [Step]) async -> String {
+    private func execute(name: String, railProgram: Int?, armStart: ArmStart, armDelay: Double, steps: [Step]) async -> String {
         // 1. Get the arm ready. Only the slow part (enable + tool setup) is skipped when the arm
         //    is already connected, ready and fault-free from a previous run.
         if let why = await prepareArm() { return why }
         if Task.isCancelled { return "STOPPED" }
 
-        // 2. Fire the rail. Then start the arm — right away by default. If a program needs the
-        //    arm to lag the rail, that is the one "extra seconds" number on the program.
+        // 2. Fire the rail, then start the arm on its cue.
+        //
+        // The cue is the six wires: the rail's control box raises the program number on them
+        // the way it always has, and the arm goes the moment it sees its number — exactly what
+        // the original arm program did. The watcher starts BEFORE the rail is touched, because
+        // nobody knows which write makes the PLC raise the wires; a watcher started afterwards
+        // would miss the fast case. If the wires never say the number, the arm starts on a
+        // timer and the status line says so — a silent fallback is how a rig runs out of step
+        // for a whole event without anyone knowing why.
+        var fallbackNote = ""
         if let n = railProgram {
+            let watcher: Task<Bool, Never>? = armStart == .signal
+                ? Task { await self.waitForSignal(n) }
+                : nil
             status = "Starting rail program \(n)…"
-            guard await rail.runProgram(n) else { return rail.lastError.isEmpty ? "Rail refused program \(n)" : rail.lastError }
+            guard await rail.runProgram(n) else {
+                watcher?.cancel()
+                return rail.lastError.isEmpty ? "Rail refused program \(n)" : rail.lastError
+            }
+            if let watcher {
+                status = "Rail program \(n) started — waiting for its signal on the wires"
+                let seen = await watcher.value
+                if Task.isCancelled { return "STOPPED" }
+                if seen, let l = lastSignal {
+                    status = String(format: "Rail signalled %d after %.2f s — arm going", n, l.latency)
+                } else {
+                    fallbackNote = " (no signal on the wires — arm started on a timer)"
+                    status = "No signal on the wires for program \(n) — starting the arm anyway"
+                }
+            }
             if armDelay > 0 {
-                status = "Rail program \(n) started — arm in \(Fmt.num(armDelay)) s"
+                status = "Arm in \(Fmt.num(armDelay)) s"
                 try? await Task.sleep(nanoseconds: UInt64(armDelay * 1_000_000_000))
                 if Task.isCancelled { return "STOPPED" }
             }
@@ -148,7 +212,38 @@ final class Runner: ObservableObject {
             if elapsed > 15 * 60 { return "Gave up waiting after 15 minutes" }
         }
         await arm.refreshStatus()
-        return "Done — \(name)"
+        return "Done — \(name)" + fallbackNote
+    }
+
+    /// Wait for the rail's control box to raise `n` on the six wires. True when it did.
+    ///
+    /// The cue is an EDGE, not a level. If the wires already read `n` from the previous run
+    /// and never change, that is not a cue — it would start the arm before the rail has been
+    /// told anything — so the pins must read something other than `n` at some point after
+    /// watching began, then `n`.
+    private func waitForSignal(_ n: Int) async -> Bool {
+        let t0 = Date()
+        var initial: Int?
+        var seenOther = false
+        var unreadable = 0
+        while Date().timeIntervalSince(t0) < Self.signalTimeout {
+            if Task.isCancelled { return false }
+            guard let b = await arm.railSignal() else {
+                unreadable += 1
+                if unreadable >= 20 { return false }      // a second of nothing: the link is the problem
+                try? await Task.sleep(nanoseconds: 50_000_000)
+                continue
+            }
+            unreadable = 0
+            if initial == nil { initial = b }
+            if b != n { seenOther = true }
+            if b == n, initial != n || seenOther {
+                lastSignal = (n, Date().timeIntervalSince(t0), Date())
+                return true
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        return false
     }
 
     /// Full enable + tool setup the first time on a connection (or after a stop / fault);
