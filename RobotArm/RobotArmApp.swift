@@ -100,7 +100,7 @@ struct StatusStrip: View {
 //
 // `-measure N` fires rail program N with the arm standing still and writes to robotarm.log whether
 // the control box raised N on the six wires, and how long after the trigger. `-run N` runs program
-// N exactly as the Run button would. Both wait up to 30 s for the links to come up first.
+// N exactly as the Run button would. Both wait up to two minutes for the links to come up first.
 extension RobotArmApp {
     private func runLaunchRequest() async {
         let d = UserDefaults.standard
@@ -109,7 +109,8 @@ extension RobotArmApp {
         guard measure != nil || run != nil else { return }
 
         Log.write("launch request: \(measure.map { "measure \($0)" } ?? "") \(run.map { "run \($0)" } ?? "")")
-        for _ in 0..<60 where !(arm.connected && rail.connected) {
+        // Two minutes: long enough to plug the Ethernet in after launching from the Mac.
+        for _ in 0..<240 where !(arm.connected && rail.connected) {
             try? await Task.sleep(nanoseconds: 500_000_000)
         }
         guard arm.connected, rail.connected else {
