@@ -68,6 +68,15 @@ final class Canon: ObservableObject {
     func start() {
         tether.start()
         ccapi.start()
+        // Report the USB side to the log too (the CCAPI side already logs its scans).
+        Task { @MainActor in
+            var last = ""
+            while true {
+                let now = tether.statusLabel
+                if now != last { Log.write("canon usb: \(now)"); last = now }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+            }
+        }
     }
 
     func searchAgain() {
