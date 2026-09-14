@@ -72,6 +72,7 @@ struct StatusStrip: View {
 
     private var railDetail: String {
         guard rail.connected else { return rail.lastError.isEmpty ? "waiting…" : rail.lastError }
+        if let f = rail.foreignMotion { return f }
         return "at \(rail.currentPosition) mm" + (rail.homed == "1" ? "" : " · not homed")
     }
 

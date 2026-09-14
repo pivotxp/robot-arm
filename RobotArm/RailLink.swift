@@ -29,6 +29,13 @@ final class RailLink: ObservableObject {
     /// True while a homing or fault-reset run is in progress, so buttons can say so.
     @Published private(set) var busy = ""
 
+    /// Set when the carriage moved while this app was not driving it. Two apps can talk to
+    /// this rail — PivotBooth on the other iPad has a Follow Me loop that moves it every second —
+    /// and from the floor that looks exactly like "the rail is glitching". Named so nobody
+    /// spends an afternoon blaming the control box.
+    @Published private(set) var foreignMotion: String?
+    private var lastSeen: (mm: Double, at: Date)?
+
     @Published private(set) var connected = false
     @Published private(set) var lastError = ""
     /// Straight from the PLC's status page.
@@ -143,6 +150,7 @@ final class RailLink: ObservableObject {
         statusError     = obj["StatusError"] ?? "0"
         if !connected { Log.write("rail: connected — at \(currentPosition) mm, homed \(homed), error \(statusError)") }
         connected = true
+        watchForForeignMotion()
         return true
     }
 
@@ -188,6 +196,25 @@ final class RailLink: ObservableObject {
         try? await Task.sleep(nanoseconds: 200_000_000)
         _ = await write(.runProgram, "0")
         return fired
+    }
+
+    /// Compare this reading with the last one. Movement while nothing here is running is
+    /// somebody else's, and it is said on screen and in the log.
+    private func watchForForeignMotion() {
+        let now = Date()
+        let mm = Double(currentPosition) ?? 0
+        defer { lastSeen = (mm, now) }
+        guard let last = lastSeen else { return }
+        let ours = Runner.shared.running || !busy.isEmpty
+        if !ours, abs(mm - last.mm) > 3 {
+            if foreignMotion == nil {
+                Log.write(String(format: "rail: MOVED %.0f → %.0f mm with nothing running here — another app is driving it", last.mm, mm))
+            }
+            foreignMotion = "Something else is moving the rail — check PivotBooth on the other iPad"
+        } else if foreignMotion != nil, now.timeIntervalSince(last.at) > 0, abs(mm - last.mm) <= 3 {
+            // Still for one poll: clear it, so the note describes now rather than earlier.
+            foreignMotion = nil
+        }
     }
 
     /// Reference the rail: run the control box's own homing so it knows where the carriage is.

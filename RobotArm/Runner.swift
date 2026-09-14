@@ -79,17 +79,30 @@ final class Runner: ObservableObject {
         }
     }
 
+    /// True from STOP until both machines have actually been told to stop.
+    private var stopping = false
+
     /// STOP everything. Always allowed.
+    ///
+    /// `running` stays true until the stop has finished talking to the rail. Seen on the rig
+    /// 2026-09-14: STOP, then Run four seconds later while the stop's own writes (Enable 0,
+    /// triggers 0, Manual 0) were still going out to the slow control box — the two
+    /// conversations interleaved, the trigger took 15 s, the rail never signalled and the arm
+    /// ran on the timer against a still carriage. One conversation with the rail at a time.
     func stop() {
         Log.write("STOP pressed")
         task?.cancel()
         task = nil
-        running = false
         preparedGeneration = -1          // after a stop the arm needs enabling again
         status = "STOPPED"
+        guard !stopping else { return }
+        stopping = true
+        running = true
         Task { @MainActor in
             await arm.stop()
             await rail.stop()
+            stopping = false
+            running = false
             status = "STOPPED — press Run to go again"
         }
     }
