@@ -293,11 +293,12 @@ final class CaptureFlow: ObservableObject {
             _ = await railReady.value                 // make sure the rail is loaded before we pulse
             let sync = max(0, booth.armSync)
             if let n = program.railProgram {
-                // Fire the RAIL first and let it get going, THEN launch the arm `armSync` later. The
-                // heavy carriage ramps up slower than the snappy arm, so firing them at the same
-                // instant left the arm ahead and the rail lagging (IMG_0237). Giving the rail the
-                // head start lines them up. Tune "Arm starts N s after the rail".
-                _ = await rail.firePulse(n)
+                // Send the rail pulse NOW, in the background — do NOT await its (wildly variable)
+                // HTTPS reply, or the arm waits with it (build 150: arm lagged 4.3 s on a slow write).
+                // The PLC acts on the pulse the moment it lands, so the carriage starts ~now; launch
+                // the arm a fixed `armSync` after so the two are moving together (the heavy rail ramps
+                // slower than the snappy arm). Tune "Arm starts N s after the rail".
+                Task { _ = await rail.firePulse(n) }
                 if sync > 0 { try? await Task.sleep(nanoseconds: UInt64(sync * 1_000_000_000)) }
                 self.goNow(program, onCanon: onCanon, filming: filming, driveArm: driveArm)
             } else {
